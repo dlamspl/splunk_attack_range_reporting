@@ -27,3 +27,14 @@ v1.0.0 of the app has the following depencencies
 Main dashboard is showing simulations run, users, hosts, MITRE ATT&CK tactics and techniques, tests executed and potential mapping with analytic stories. 
 
 ![Main Dashboard](appserver/static/docs/img/ar_main_dashboardv1.0.png?raw=true "Main Dashboard")
+
+The second dashboard (Navigator) shows all the available atomic red tests and their potential mappings to security content. Reason it is "potential" is because the mapping is just been made based on the tactique referenced from the test and the security content. This does not necessarily mean that a specific atomic red test will necessarily detonate a detection. And this is where you should read more on what ATT&CK is all about :)
+
+
+![Navigator](appserver/static/docs/img/ar_navigator_dashboardv1.0.png?raw=true "Navigator")
+
+
+Finally there is a dashboard made with Splunk dashboards - Beta which looks nice but still in beta !
+
+![Main - Beta](appserver/static/docs/img/ar_dashboards_beta_preview.png?raw=true "Main-Beta")
+
