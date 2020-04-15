@@ -1,0 +1,247 @@
+<form theme="dark">
+  <label>Attack Range Navigator</label>
+  <description>Available atomic red tests and possible mappings between detections</description>
+  <fieldset submitButton="false" autoRun="true">
+    <input type="dropdown" token="channel" searchWhenChanged="true">
+      <label>Source</label>
+      <choice value="*">All</choice>
+      <default>*</default>
+      <initialValue>*</initialValue>
+      <fieldForLabel>channel</fieldForLabel>
+      <fieldForValue>channel</fieldForValue>
+      <search>
+        <query>| sseanalytics 
+|stats count by channel
+|fields channel</query>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </search>
+      <prefix>"</prefix>
+      <suffix>"</suffix>
+    </input>
+    <input type="dropdown" token="technique_token" searchWhenChanged="true">&gt;<label>Technique</label>
+      <choice value="*">All</choice>
+      <prefix>"</prefix>
+      <suffix>"</suffix>
+      <fieldForLabel>mitre_technique</fieldForLabel>
+      <fieldForValue>mitre_technique</fieldForValue>
+      <search>
+        <query>| sseanalytics 
+|mvexpand mitre_technique 
+|search mitre_technique!="None" mitre_technique!="" mitre_technique!="TA*" 
+|table name , mitre_technique, channel
+|lookup atomic-red-windows-tests "Technique #" AS mitre_technique OUTPUT "Test Name" as atomic_test_name
+| eval atomic_test_exists=if(atomic_test_name != "", "1", "0")
+| where atomic_test_exists="1"
+
+|dedup mitre_technique</query>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </search>
+      <default>*</default>
+      <initialValue>*</initialValue>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <title># Available tests</title>
+      <single>
+        <search>
+          <query>|inputlookup atomic-red-windows-tests |stats count</query>
+          <earliest>$earliest$</earliest>
+          <latest>$latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="drilldown">all</option>
+        <option name="refresh.display">progressbar</option>
+      </single>
+    </panel>
+    <panel>
+      <title># MITRE ATT&amp;CK Tactics</title>
+      <single>
+        <search>
+          <query>|inputlookup atomic-red-windows-tests
+|stats dc("Tactic")</query>
+          <earliest>$earliest$</earliest>
+          <latest>$latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </single>
+    </panel>
+    <panel>
+      <title># MITRE ATT&amp;CK Techniques tests</title>
+      <single>
+        <search>
+          <query>|inputlookup atomic-red-windows-tests
+|stats dc("Technique #")</query>
+          <earliest>0</earliest>
+          <latest></latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="rangeColors">["0x53a051","0xf1813f"]</option>
+        <option name="rangeValues">[10000]</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="useColors">1</option>
+        <option name="useThousandSeparators">1</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Atomic test Tactics available</title>
+      <chart>
+        <search>
+          <query>|inputlookup atomic-red-windows-tests
+| sseidenrichment type=mitreid field="Technique #"
+|stats count by Tactic</query>
+          <earliest>$earliest$</earliest>
+          <latest>$latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">pie</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>http://3.127.167.74:8000/en-US/app/splunk_attack_range_reporting/attack_range_main_dashboard/editxml#<option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Possible Analytic stories</title>
+      <table>
+        <search>
+          <query>|inputlookup atomic-red-windows-tests
+|rename "Technique #" as Technique
+| sseidenrichment type=mitreid field=Technique 
+| eval mitre_id = Technique+" - "+mitre_technique_display, atomic_test= 'Test Number'+"-"+'Test Name'
+|lookup mitre_matrix_list Technique AS mitre_technique_display
+
+
+| join type=left max=0 mitre_technique_display 
+   [ | rest /services/configs/conf-analytic_stories splunk_server=local count=0
+|search providing_technologies="*Sysmon*" OR providing_technologies="*Active Directory*" AND providing_technologies!="*AWS*"
+|rex field=mappings ".*,+\s\"mitre_attack\":(?&lt;tactics&gt;.*),+\s\"mitre_technique_id\""
+|rex field=tactics mode=sed "s/\[//g"
+|rex field=tactics mode=sed "s/\]//g"
+| eval tactics=split(tactics, ",")
+|rex field=tactics mode=sed "s/\"//g"
+| mvexpand tactics
+| eval mitre_technique_display=trim(tactics)  
+| where mitre_technique_display!=""
+|fields mitre_technique_display, title]
+
+|stats dc(title) by title
+| fields title</query>
+          <earliest>$earliest$</earliest>
+          <latest>$latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="count">20</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">cell</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+        <drilldown>
+          <link target="_blank">/app/DA-ESS-ContentUpdate/analytic_story_details?form.analytic_story_name=$row.title$</link>
+        </drilldown>
+      </table>
+    </panel>
+    <panel>
+      <title>Detections with Atomic tests mapping</title>
+      <table>
+        <search>
+          <query>| sseanalytics 
+|mvexpand mitre_technique 
+|search mitre_technique!="None" mitre_technique!="" mitre_technique!="TA*" 
+|table name , mitre_technique, channel
+|lookup atomic-red-windows-tests "Technique #" AS mitre_technique OUTPUT "Test Name" as atomic_test_name
+| eval atomic_test_exists=if(atomic_test_name != "", "1", "0")
+| where atomic_test_exists="1"
+|search mitre_technique=$technique_token$
+|rename mitre_technique as "Candidate Atomic test"
+
+|table name, "Candidate Atomic test", channel</query>
+          <earliest>$earliest$</earliest>
+          <latest>$latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="count">10</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">cell</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+        <drilldown>
+          <link target="_blank">/app/$row.channel$/showcase_simple_search?ml_toolkit.dataset=$row.name$</link>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Atomic test Techniques available</title>
+      <viz type="punchcard_app.punchcard">
+        <search>
+          <query>|inputlookup atomic-red-windows-tests
+| sseidenrichment type=mitreid field="Technique #"
+
+
+| stats count count("Technique #") by Tactic, "Technique #"
+|sort -count</query>
+          <earliest>$earliest$</earliest>
+          <latest>$latest$</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="punchcard_app.punchcard.colorMode">categorical</option>
+        <option name="punchcard_app.punchcard.labelRotation">angle</option>
+        <option name="punchcard_app.punchcard.maxColor">#3fc77a</option>
+        <option name="punchcard_app.punchcard.minColor">#d93f3c</option>
+        <option name="punchcard_app.punchcard.numOfBins">9</option>
+        <option name="punchcard_app.punchcard.radiusScale">global</option>
+        <option name="punchcard_app.punchcard.useColors">true</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </viz>
+    </panel>
+  </row>
+</form>

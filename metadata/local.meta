@@ -1,0 +1,57 @@
+[app/ui]
+version = 8.0.2
+modtime = 1586798899.888344000
+
+[app/launcher]
+version = 8.0.2
+modtime = 1586798899.889464000
+
+[views/attack_range_main_dashboard]
+access = read : [ * ]
+export = none
+owner = admin
+version = 8.0.1
+modtime = 1586941209.657182000
+
+[views/attack_range_navigator]
+access = read : [ * ]
+export = none
+owner = admin
+version = 8.0.1
+modtime = 1586957534.458117000
+
+[nav/default]
+version = 8.0.2
+modtime = 1586836655.568709000
+
+[app/install/install_source_checksum]
+version = 8.0.1
+modtime = 1586922601.443066000
+
+[lookups/mitre_matix_list_ar.csv]
+access = read : [ * ]
+export = none
+owner = admin
+version = 8.0.1
+modtime = 1586923458.623613000
+
+[transforms/mitre_matrix_list_ar]
+access = read : [ * ]
+export = none
+owner = admin
+version = 8.0.1
+modtime = 1586923678.456480000
+
+[lookups/windows-atomic-red-tests.csv]
+access = read : [ * ]
+export = none
+owner = admin
+version = 8.0.1
+modtime = 1586923987.601611000
+
+[transforms/atomic-red-windows-tests]
+access = read : [ * ]
+export = none
+owner = admin
+version = 8.0.1
+modtime = 1586924042.816955000

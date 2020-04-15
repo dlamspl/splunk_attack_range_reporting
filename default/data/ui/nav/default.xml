@@ -1,0 +1,19 @@
+<nav search_view="search">
+
+    <!-- Set "attack_range_main_dashboard" as the default page -->
+    <collection label="Attack Range Dashboards">
+
+        <view name="attack_range_main_dashboard" default="true"/>
+        <view name="attack_range_navigator" />
+
+        
+
+    </collection>
+    
+  	<view name="search" />
+  	<view name="datasets" />
+  <view name="dashboards" />
+  
+  
+    
+</nav>
