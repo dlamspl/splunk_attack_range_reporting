@@ -28,7 +28,7 @@ Main dashboard is showing simulations run, users, hosts, MITRE ATT&CK tactics an
 
 ![Main Dashboard](appserver/static/docs/img/ar_main_dashboardv1.0.png?raw=true "Main Dashboard")
 
-The second dashboard (Navigator) shows all the available atomic red tests and their potential mappings to security content. Reason it is "potential" is because the mapping is just been made based on the tactique referenced from the test and the security content. This does not necessarily mean that a specific atomic red test will necessarily detonate a detection. And this is where you should read more on what ATT&CK is all about :)
+The second dashboard (Navigator) shows all the available atomic red tests and their potential mappings to security content. Reason it is "potential" is because the mapping is just been made based on the tactique referenced from the test and the security content. This does not necessarily mean that a specific atomic red test will detonate a detection. And this is where you should read more on what ATT&CK is all about :)
 
 
 ![Navigator](appserver/static/docs/img/ar_navigator_dashboardv1.0.png?raw=true "Navigator")
