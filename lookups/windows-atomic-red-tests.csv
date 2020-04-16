@@ -212,8 +212,6 @@ persistence,T1084,1,Persistence via WMI Event Subscription
 persistence,T1004,1,Winlogon Shell Key Persistence - PowerShell
 persistence,T1004,2,Winlogon Userinit Key Persistence - PowerShell
 persistence,T1004,3,Winlogon Notify Key Logon Persistence - PowerShell
-impact,T1531,1,Change User Password - Windows
-impact,T1531,2,Delete User - Windows
 impact,T1485,1,Windows - Overwrite file with Sysinternals SDelete
 impact,T1490,1,Windows - Delete Volume Shadow Copies
 impact,T1490,2,Windows - Delete Volume Shadow Copies via WMI
