@@ -1,6 +1,6 @@
 <form theme="dark">
   <search id="BaseSearch">
-    <query>index="attack" Technique!="Technique" Technique!=""
+    <query>`get_attack_data`
       | sseidenrichment type=mitreid field=Technique 
       | eval mitre_id = Technique+" - "+mitre_technique_display, atomic_test= 'Test Number'+"-"+'Test Name'
       |lookup mitre_matrix_list_ar Technique AS mitre_technique_display
@@ -234,7 +234,7 @@
       <title>Possible Analytic stories</title>
       <table>
         <search>
-          <query>index="attack" Technique!="Technique"
+          <query>`get_attack_data`
 | sseidenrichment type=mitreid field=Technique 
 | eval mitre_id = Technique+" - "+mitre_technique_display, atomic_test= 'Test Number'+"-"+'Test Name'
 |lookup mitre_matrix_list_ar Technique AS mitre_technique_display

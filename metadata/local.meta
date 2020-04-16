@@ -11,7 +11,7 @@ access = read : [ * ]
 export = none
 owner = admin
 version = 8.0.1
-modtime = 1586941209.657182000
+modtime = 1587039557.989469000
 
 [views/attack_range_navigator]
 access = read : [ * ]
@@ -55,3 +55,10 @@ export = none
 owner = admin
 version = 8.0.1
 modtime = 1586924042.816955000
+
+[macros/get_attack_data]
+access = read : [ * ]
+export = none
+owner = admin
+version = 8.0.1
+modtime = 1587039526.751615000
