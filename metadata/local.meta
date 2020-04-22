@@ -11,14 +11,14 @@ access = read : [ * ]
 export = none
 owner = admin
 version = 8.0.1
-modtime = 1587039557.989469000
+modtime = 1587537315.709316000
 
 [views/attack_range_navigator]
 access = read : [ * ]
 export = none
 owner = admin
 version = 8.0.1
-modtime = 1586957534.458117000
+modtime = 1587534293.161279000
 
 [nav/default]
 version = 8.0.2
@@ -28,19 +28,12 @@ modtime = 1586836655.568709000
 version = 8.0.1
 modtime = 1586922601.443066000
 
-[lookups/mitre_matix_list_ar.csv]
-access = read : [ * ]
-export = none
-owner = admin
-version = 8.0.1
-modtime = 1586923458.623613000
-
 [transforms/mitre_matrix_list_ar]
 access = read : [ * ]
 export = none
 owner = admin
 version = 8.0.1
-modtime = 1586923678.456480000
+modtime = 1587406098.533287000
 
 [lookups/windows-atomic-red-tests.csv]
 access = read : [ * ]
@@ -62,3 +55,10 @@ export = none
 owner = admin
 version = 8.0.1
 modtime = 1587043563.477440000
+
+[lookups/mitre_matrix_list_ar.csv]
+access = read : [ * ]
+export = none
+owner = admin
+version = 8.0.1
+modtime = 1587406027.679196000

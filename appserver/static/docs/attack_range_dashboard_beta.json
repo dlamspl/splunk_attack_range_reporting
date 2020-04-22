@@ -1,0 +1,464 @@
+{
+	"visualizations": {
+		"viz_4U4TqOL8": {
+			"type": "viz.singlevalue",
+			"options": {
+				"showTrendIndicator": false,
+				"showSparkline": false
+			},
+			"dataSources": {
+				"primary": "ds_moeO7RhS"
+			},
+			"title": "",
+			"encoding": {}
+		},
+		"viz_HVAIb39P": {
+			"type": "viz.text",
+			"options": {
+				"content": "# Attack simulations run",
+				"textColor": "#53a051",
+				"fontFamily": "Splunk Platform Mono"
+			}
+		},
+		"viz_KDvzWFfz": {
+			"type": "viz.singlevalueradial",
+			"options": {},
+			"dataSources": {
+				"primary": "ds_2UZ2KtQV"
+			},
+			"encoding": {}
+		},
+		"viz_mZJ7zKIi": {
+			"type": "viz.text",
+			"options": {
+				"content": "# MITRE ATT&CK Tactics",
+				"textColor": "#53a051",
+				"fontFamily": "Splunk Platform Mono"
+			}
+		},
+		"viz_4ZP1vBIx": {
+			"type": "viz.singlevalueradial",
+			"options": {},
+			"dataSources": {
+				"primary": "ds_xsXkIYwK"
+			}
+		},
+		"viz_DX9gDrC4": {
+			"type": "viz.text",
+			"options": {
+				"content": "# MITRE ATT&CK Techniques",
+				"textColor": "#53a051",
+				"fontFamily": "Splunk Platform Mono"
+			}
+		},
+		"viz_zHeIBMcG": {
+			"type": "viz.pie",
+			"options": {
+				"chart.sliceCollapsingThreshold": 0.02,
+				"chart.showPercent": true
+			},
+			"dataSources": {
+				"primary": "ds_YEqt13sp"
+			},
+			"title": "Tactics"
+		},
+		"viz_bDfPLKQQ": {
+			"type": "viz.table",
+			"options": {},
+			"dataSources": {
+				"primary": "ds_ysRlhjoH"
+			}
+		},
+		"viz_wolA70yo": {
+			"type": "viz.punchcard",
+			"options": {},
+			"dataSources": {
+				"primary": "ds_elusWUyb"
+			},
+			"title": "Techniques"
+		},
+		"viz_aazS8yuT": {
+			"type": "viz.img",
+			"options": {
+				"preserveAspectRatio": true,
+				"src": "splunk-enterprise-kvstore://5e8b20ea52e49f06276b2731"
+			}
+		},
+		"viz_zloWzxxs": {
+			"type": "viz.pie",
+			"options": {
+				"chart.showPercent": true
+			},
+			"dataSources": {
+				"primary": "ds_LaMxnSN2"
+			},
+			"title": "Target hosts"
+		},
+		"viz_3JgGciO4": {
+			"type": "viz.table",
+			"options": {
+				"showHeader": false
+			},
+			"dataSources": {
+				"primary": "ds_T1Z7x1qi"
+			},
+			"title": "Possible Analytic Stories",
+			"eventHandlers": [
+				{
+					"type": "drilldown.customUrl",
+					"options": {
+						"url": "/en-US/app/Splunk_Analytic_Story_Execution/analytic_story_execution?earliest=-7d%40h&latest=now&form.title=$row.title$",
+						"newTab": true
+					}
+				}
+			]
+		},
+		"viz_rKqBjYrf": {
+			"type": "viz.singlevalueradial",
+			"options": {},
+			"dataSources": {
+				"primary": "ds_A7VDU5bm"
+			}
+		},
+		"viz_v1G7hebr": {
+			"type": "viz.table",
+			"options": {
+				"showHeader": false
+			},
+			"dataSources": {
+				"primary": "ds_5GJti4Re"
+			}
+		},
+		"viz_AEITp6cU": {
+			"type": "viz.text",
+			"options": {
+				"content": "# Threat Groups",
+				"textColor": "#53a051",
+				"fontFamily": "Splunk Platform Mono"
+			}
+		},
+		"viz_b3Xn7QDB": {
+			"type": "viz.text",
+			"options": {
+				"content": "Threat Groups",
+				"textColor": "#53a051",
+				"fontFamily": "Splunk Platform Mono"
+			}
+		},
+		"viz_ElvebK9t": {
+			"type": "viz.singlevalueicon",
+			"options": {
+				"showValue": false,
+				"icon": "splunk-enterprise-kvstore://5e90641652e49f062612d701",
+				"color": "#53a051"
+			}
+		}
+	},
+	"dataSources": {
+		"ds_kQT2u3AK": {
+			"type": "ds.search",
+			"options": {
+				"queryParameters": {
+					"earliest": "-30d@h",
+					"latest": "now"
+				},
+				"query": "index=\"attack\" Technique!=\"Technique\"\n| sseidenrichment type=mitreid field=Technique \n| eval mitre_id = Technique+\" - \"+mitre_technique_display, atomic_test= 'Test Number'+\"-\"+'Test Name'\n|lookup mitre_matrix_list Technique AS mitre_technique_display\n|table _time,atomic_test, Hostname,mitre_id,mitre_technique_display,mitre_technique_url,Tactic,Technique,\"Test Name\", Username"
+			},
+			"name": "Base Search"
+		},
+		"ds_moeO7RhS": {
+			"type": "ds.chain",
+			"options": {
+				"query": "|stats count",
+				"extend": "ds_kQT2u3AK",
+				"queryParameters": {
+					"earliest": "-7d@h",
+					"latest": "now"
+				}
+			},
+			"name": "Search_1"
+		},
+		"ds_2UZ2KtQV": {
+			"type": "ds.chain",
+			"options": {
+				"query": "|stats dc(Tactic)",
+				"extend": "ds_kQT2u3AK",
+				"queryParameters": {
+					"earliest": "-7d@h",
+					"latest": "now"
+				}
+			},
+			"name": "Search_2"
+		},
+		"ds_xsXkIYwK": {
+			"type": "ds.chain",
+			"options": {
+				"query": "|stats dc(Technique)",
+				"extend": "ds_kQT2u3AK",
+				"queryParameters": {
+					"earliest": "-7d@h",
+					"latest": "now"
+				}
+			},
+			"name": "Search_3"
+		},
+		"ds_YEqt13sp": {
+			"type": "ds.chain",
+			"options": {
+				"query": "|stats count by Tactic",
+				"extend": "ds_kQT2u3AK",
+				"queryParameters": {
+					"earliest": "-7d@h",
+					"latest": "now"
+				}
+			},
+			"name": "Search_4"
+		},
+		"ds_ysRlhjoH": {
+			"type": "ds.chain",
+			"options": {
+				"query": "|table \"Test Name\", Hostname,mitre_id,,mitre_technique_url,Tactic,Technique, Username",
+				"extend": "ds_kQT2u3AK",
+				"queryParameters": {
+					"earliest": "-7d@h",
+					"latest": "now"
+				}
+			},
+			"name": "Search_5"
+		},
+		"ds_elusWUyb": {
+			"type": "ds.chain",
+			"options": {
+				"queryParameters": {
+					"earliest": "-7d@h",
+					"latest": "now"
+				},
+				"query": "| stats count by Tactic, Technique",
+				"extend": "ds_kQT2u3AK"
+			},
+			"name": "Search_6"
+		},
+		"ds_LaMxnSN2": {
+			"type": "ds.chain",
+			"options": {
+				"query": "|stats count by Hostname",
+				"extend": "ds_kQT2u3AK",
+				"queryParameters": {
+					"earliest": "-7d@h",
+					"latest": "now"
+				}
+			},
+			"name": "Search_7"
+		},
+		"ds_T1Z7x1qi": {
+			"type": "ds.search",
+			"options": {
+				"query": "index=\"attack\" Technique!=\"Technique\"\n| sseidenrichment type=mitreid field=Technique \n| eval mitre_id = Technique+\" - \"+mitre_technique_display, atomic_test= 'Test Number'+\"-\"+'Test Name'\n|lookup mitre_matrix_list Technique AS mitre_technique_display\n\n\n| join type=left max=0 mitre_technique_display \n   [ | rest /services/configs/conf-analytic_stories splunk_server=local count=0\n|search providing_technologies=\"*Sysmon*\" OR providing_technologies=\"*Active Directory*\" AND providing_technologies!=\"*AWS*\"\n|rex field=mappings \".*,+\\s\\\"mitre_attack\\\":(?<tactics>.*),+\\s\\\"mitre_technique_id\\\"\"\n|rex field=tactics mode=sed \"s/\\[//g\"\n|rex field=tactics mode=sed \"s/\\]//g\"\n| eval tactics=split(tactics, \",\")\n|rex field=tactics mode=sed \"s/\\\"//g\"\n| mvexpand tactics\n| eval mitre_technique_display=trim(tactics)  \n| where mitre_technique_display!=\"\"\n|fields mitre_technique_display, title]\n\n|stats dc(title) by title\n| fields title"
+			},
+			"name": "Search_8"
+		},
+		"ds_A7VDU5bm": {
+			"type": "ds.search",
+			"options": {
+				"query": "index=\"attack\" Technique!=\"Technique\"\n| sseidenrichment type=mitreid field=Technique \n| eval mitre_id = Technique+\" - \"+mitre_technique_display, atomic_test= 'Test Number'+\"-\"+'Test Name'\n|lookup mitre_matrix_list Technique AS mitre_technique_display\n|table mitre_technique_groups\n|eval groups=split(mitre_technique_groups,\",\")  \n|mvexpand groups\n|stats dc(groups)",
+				"queryParameters": {
+					"earliest": "-7d@h",
+					"latest": "now"
+				}
+			},
+			"name": "Search_9"
+		},
+		"ds_5GJti4Re": {
+			"type": "ds.search",
+			"options": {
+				"query": "index=\"attack\" Technique!=\"Technique\"\n| sseidenrichment type=mitreid field=Technique \n| eval mitre_id = Technique+\" - \"+mitre_technique_display, atomic_test= 'Test Number'+\"-\"+'Test Name'\n|lookup mitre_matrix_list Technique AS mitre_technique_display\n|table mitre_technique_groups\n|eval groups=split(mitre_technique_groups,\",\")  \n|mvexpand groups\n\n|dedup groups\n| fields groups\n| sort -_mkv_child",
+				"queryParameters": {
+					"earliest": "-7d@h",
+					"latest": "now"
+				}
+			},
+			"name": "Search_10"
+		}
+	},
+	"inputs": {},
+	"layout": {
+		"type": "absolute",
+		"options": {
+			"width": 1600
+		},
+		"structure": [
+			{
+				"item": "viz_4U4TqOL8",
+				"type": "block",
+				"position": {
+					"x": 120,
+					"y": 50,
+					"w": 120,
+					"h": 110
+				}
+			},
+			{
+				"item": "viz_HVAIb39P",
+				"type": "block",
+				"position": {
+					"x": 40,
+					"y": 0,
+					"w": 300,
+					"h": 50
+				}
+			},
+			{
+				"item": "viz_KDvzWFfz",
+				"type": "block",
+				"position": {
+					"x": 120,
+					"y": 260,
+					"w": 130,
+					"h": 130
+				}
+			},
+			{
+				"item": "viz_mZJ7zKIi",
+				"type": "block",
+				"position": {
+					"x": 40,
+					"y": 210,
+					"w": 300,
+					"h": 50
+				}
+			},
+			{
+				"item": "viz_4ZP1vBIx",
+				"type": "block",
+				"position": {
+					"x": 120,
+					"y": 450,
+					"w": 120,
+					"h": 120
+				}
+			},
+			{
+				"item": "viz_DX9gDrC4",
+				"type": "block",
+				"position": {
+					"x": 40,
+					"y": 400,
+					"w": 300,
+					"h": 50
+				}
+			},
+			{
+				"item": "viz_zHeIBMcG",
+				"type": "block",
+				"position": {
+					"x": 350,
+					"y": 10,
+					"w": 560,
+					"h": 200
+				}
+			},
+			{
+				"item": "viz_bDfPLKQQ",
+				"type": "block",
+				"position": {
+					"x": 10,
+					"y": 580,
+					"w": 940,
+					"h": 320
+				}
+			},
+			{
+				"item": "viz_wolA70yo",
+				"type": "block",
+				"position": {
+					"x": 350,
+					"y": 210,
+					"w": 1030,
+					"h": 360
+				}
+			},
+			{
+				"item": "viz_aazS8yuT",
+				"type": "block",
+				"position": {
+					"x": 0,
+					"y": 50,
+					"w": 120,
+					"h": 140
+				}
+			},
+			{
+				"item": "viz_zloWzxxs",
+				"type": "block",
+				"position": {
+					"x": 910,
+					"y": 10,
+					"w": 470,
+					"h": 200
+				}
+			},
+			{
+				"item": "viz_3JgGciO4",
+				"type": "block",
+				"position": {
+					"x": 970,
+					"y": 580,
+					"w": 410,
+					"h": 320
+				}
+			},
+			{
+				"item": "viz_rKqBjYrf",
+				"type": "block",
+				"position": {
+					"x": 1410,
+					"y": 60,
+					"w": 150,
+					"h": 150
+				}
+			},
+			{
+				"item": "viz_v1G7hebr",
+				"type": "block",
+				"position": {
+					"x": 1390,
+					"y": 270,
+					"w": 210,
+					"h": 300
+				}
+			},
+			{
+				"item": "viz_AEITp6cU",
+				"type": "block",
+				"position": {
+					"x": 1390,
+					"y": 10,
+					"w": 190,
+					"h": 50
+				}
+			},
+			{
+				"item": "viz_b3Xn7QDB",
+				"type": "block",
+				"position": {
+					"x": 1390,
+					"y": 220,
+					"w": 190,
+					"h": 50
+				}
+			},
+			{
+				"item": "viz_ElvebK9t",
+				"type": "block",
+				"position": {
+					"x": 1560,
+					"y": 220,
+					"w": 40,
+					"h": 40
+				}
+			}
+		]
+	},
+	"description": "",
+	"title": "Splunk Attack Range"
+}

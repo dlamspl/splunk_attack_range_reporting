@@ -231,9 +231,31 @@
   </row>
   <row>
     <panel>
-      <title>Possible Analytic stories</title>
+      <title>Executed simulations</title>
+      <table>
+        <search base="BaseSearch">
+          <query>|table atomic_test, Hostname,mitre_id,mitre_technique_display,mitre_technique_url,Tactic,Technique,"Test Name", Username
+        </query>
+        </search>
+        <option name="count">5</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Potential Analytic stories [$story_count$]</title>
       <table>
         <search>
+          
+      <progress>
+            <set token="story_count">$job.resultCount$</set>
+      </progress>          
           <query>`get_attack_data`
 | sseidenrichment type=mitreid field=Technique 
 | eval mitre_id = Technique+" - "+mitre_technique_display, atomic_test= 'Test Number'+"-"+'Test Name'
@@ -281,19 +303,33 @@
         </drilldown>
       </table>
     </panel>
-  </row>
-  <row>
     <panel>
-      <title>Executed simulations</title>
+      <title>Potential detections [$detection_count$]</title>
+ 
       <table>
-        <search base="BaseSearch">
-          <query>
-|table atomic_test, Hostname,mitre_id,mitre_technique_display,mitre_technique_url,Tactic,Technique,"Test Name", Username</query>
+
+        <search>
+      <progress>
+            <set token="detection_count">$job.resultCount$</set>
+      </progress>
+          <query>`get_attack_data`
+|rename Technique as mitre_technique
+
+| join type=left max=0 mitre_technique
+[| sseanalytics
+|search mitre_technique!="None"
+|mvexpand mitre_technique]
+|stats dc(name) by name,mitre_technique,channel
+|table name, mitre_technique, channel</query>
+          <earliest>$time_token.earliest$</earliest>
+          <latest>$time_token.latest$</latest>
+          <sampleRatio>1</sampleRatio>
         </search>
-        <option name="count">5</option>
+        <option name="count">10</option>
         <option name="dataOverlayMode">none</option>
         <option name="drilldown">none</option>
         <option name="percentagesRow">false</option>
+        <option name="refresh.display">progressbar</option>
         <option name="rowNumbers">false</option>
         <option name="totalsRow">false</option>
         <option name="wrap">true</option>
