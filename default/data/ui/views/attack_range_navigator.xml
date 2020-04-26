@@ -1,20 +1,28 @@
 <form theme="dark">
+  <init>
+    <set token="show_init_tactic"></set>
+    <unset token="show_breakdown_tactic"></unset>
+  </init>
+  <search id="AtomicRedLookup">
+    <query>|inputlookup atomic-red-windows-tests
+    </query>
+  </search>
+  <search id="SSEAnalytics">
+    <query>| sseanalytics 
+    </query>
+  </search>
   <label>Attack Range Navigator</label>
   <description>Available atomic red tests and possible mappings between detections</description>
   <fieldset submitButton="false" autoRun="true">
-    <input type="dropdown" token="channel" searchWhenChanged="true">
-      <label>Source</label>
+    <input type="dropdown" token="channel_token" searchWhenChanged="true">
+      <label>Content Source</label>
       <choice value="*">All</choice>
       <default>*</default>
       <initialValue>*</initialValue>
       <fieldForLabel>channel</fieldForLabel>
       <fieldForValue>channel</fieldForValue>
       <search>
-        <query>| sseanalytics 
-|stats count by channel
-|fields channel</query>
-        <earliest>-24h@h</earliest>
-        <latest>now</latest>
+        <query>| sseanalytics |stats count by channel|fields channel</query>
       </search>
       <prefix>"</prefix>
       <suffix>"</suffix>
@@ -23,34 +31,61 @@
       <choice value="*">All</choice>
       <prefix>"</prefix>
       <suffix>"</suffix>
-      <fieldForLabel>mitre_technique</fieldForLabel>
-      <fieldForValue>mitre_technique</fieldForValue>
+      <fieldForLabel>mitre_id</fieldForLabel>
+      <fieldForValue>mitre_id</fieldForValue>
       <search>
-        <query>| sseanalytics 
-|mvexpand mitre_technique 
-|search mitre_technique!="None" mitre_technique!="" mitre_technique!="TA*" 
-|table name , mitre_technique, channel
-|lookup atomic-red-windows-tests "Technique #" AS mitre_technique OUTPUT "Test Name" as atomic_test_name
-| eval atomic_test_exists=if(atomic_test_name != "", "1", "0")
-| where atomic_test_exists="1"
-
-|dedup mitre_technique</query>
-        <earliest>-24h@h</earliest>
-        <latest>now</latest>
+        <query>|inputlookup atomic-red-windows-tests|dedup "Technique #"|rename "Technique #" as mitre_id|fields mitre_id</query>
       </search>
       <default>*</default>
       <initialValue>*</initialValue>
     </input>
+    <input type="dropdown" token="tactic_name_token" searchWhenChanged="true">
+      <label>Tactic Name [Detections]</label>
+      <choice value="*">All</choice>
+      <default>*</default>
+      <prefix>"</prefix>
+      <suffix>"</suffix>
+      <initialValue>*</initialValue>
+      <fieldForLabel>Tactic</fieldForLabel>
+      <fieldForValue>Tactic</fieldForValue>
+      <change>
+        <condition match="$tactic_name_token$!=&quot;*&quot; ">
+          <set token="show_breakdown_tactic"></set>
+          <unset token="show_init_tactic"></unset>
+        </condition>
+        <condition>
+          <unset token="show_breakdown_tactic"></unset>
+          <set token="show_init_tactic"></set>
+        </condition>
+      </change>
+      <search>
+        <query>|inputlookup mitre_matrix_list_ar|dedup Tactic |fields Tactic</query>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </search>
+    </input>
+    <input type="dropdown" token="technique_name_token" searchWhenChanged="true">
+      <label>Technique Name [Detections]</label>
+      <choice value="*">All</choice>
+      <default>*</default>
+      <prefix>"*</prefix>
+      <suffix>*"</suffix>
+      <initialValue>*</initialValue>
+      <fieldForLabel>Technique</fieldForLabel>
+      <fieldForValue>Technique</fieldForValue>
+      <search>
+        <query>|inputlookup mitre_matrix_list_ar|dedup Technique |fields Technique</query>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </search>
+    </input>
   </fieldset>
   <row>
     <panel>
-      <title># Available tests</title>
+      <title># Available Atomic Red tests</title>
       <single>
-        <search>
-          <query>|inputlookup atomic-red-windows-tests |stats count</query>
-          <earliest>$earliest$</earliest>
-          <latest>$latest$</latest>
-          <sampleRatio>1</sampleRatio>
+        <search base="AtomicRedLookup">
+          <query>|search "Technique #"=$technique_token$|stats count</query>
         </search>
         <option name="drilldown">all</option>
         <option name="refresh.display">progressbar</option>
@@ -59,12 +94,8 @@
     <panel>
       <title># MITRE ATT&amp;CK Tactics</title>
       <single>
-        <search>
-          <query>|inputlookup atomic-red-windows-tests
-|stats dc("Tactic")</query>
-          <earliest>$earliest$</earliest>
-          <latest>$latest$</latest>
-          <sampleRatio>1</sampleRatio>
+        <search base="AtomicRedLookup">
+          <query>|search "Technique #"=$technique_token$ |stats dc("Tactic")</query>
         </search>
         <option name="drilldown">none</option>
         <option name="refresh.display">progressbar</option>
@@ -74,14 +105,10 @@
       </single>
     </panel>
     <panel>
-      <title># MITRE ATT&amp;CK Techniques tests</title>
+      <title># MITRE ATT&amp;CK Techniques</title>
       <single>
-        <search>
-          <query>|inputlookup atomic-red-windows-tests
-|stats dc("Technique #")</query>
-          <earliest>0</earliest>
-          <latest></latest>
-          <sampleRatio>1</sampleRatio>
+        <search base="AtomicRedLookup">
+          <query>|search "Technique #"=$technique_token$|stats dc("Technique #")</query>
         </search>
         <option name="drilldown">none</option>
         <option name="rangeColors">["0x53a051","0xf1813f"]</option>
@@ -90,20 +117,15 @@
         <option name="trellis.enabled">0</option>
         <option name="trellis.scales.shared">1</option>
         <option name="trellis.size">medium</option>
-        <option name="useColors">1</option>
+        <option name="useColors">0</option>
         <option name="useThousandSeparators">1</option>
       </single>
     </panel>
     <panel>
-      <title>Atomic test Tactics available</title>
+      <title>Atomic Red test Tactics</title>
       <chart>
-        <search>
-          <query>|inputlookup atomic-red-windows-tests
-| sseidenrichment type=mitreid field="Technique #"
-|stats count by Tactic</query>
-          <earliest>$earliest$</earliest>
-          <latest>$latest$</latest>
-          <sampleRatio>1</sampleRatio>
+        <search base="AtomicRedLookup">
+          <query>|search "Technique #"=$technique_token$ |stats count by Tactic</query>
         </search>
         <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
         <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
@@ -121,7 +143,8 @@
         <option name="charting.chart.bubbleMaximumSize">50</option>
         <option name="charting.chart.bubbleMinimumSize">10</option>
         <option name="charting.chart.bubbleSizeBy">area</option>
-        <option name="charting.chart.nullValueMode">gaps</option>http://3.127.167.74:8000/en-US/app/splunk_attack_range_reporting/attack_range_main_dashboard/editxml#<option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
         <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
         <option name="charting.chart.stackMode">default</option>
         <option name="charting.chart.style">shiny</option>
@@ -141,93 +164,12 @@
   </row>
   <row>
     <panel>
-      <title>Possible Analytic stories</title>
-      <table>
-        <search>
-          <query>|inputlookup atomic-red-windows-tests
-|rename "Technique #" as Technique
-| sseidenrichment type=mitreid field=Technique 
-| eval mitre_id = Technique+" - "+mitre_technique_display, atomic_test= 'Test Number'+"-"+'Test Name'
-|lookup mitre_matrix_list Technique AS mitre_technique_display
-
-
-| join type=left max=0 mitre_technique_display 
-   [ | rest /services/configs/conf-analytic_stories splunk_server=local count=0
-|search providing_technologies="*Sysmon*" OR providing_technologies="*Active Directory*" AND providing_technologies!="*AWS*"
-|rex field=mappings ".*,+\s\"mitre_attack\":(?&lt;tactics&gt;.*),+\s\"mitre_technique_id\""
-|rex field=tactics mode=sed "s/\[//g"
-|rex field=tactics mode=sed "s/\]//g"
-| eval tactics=split(tactics, ",")
-|rex field=tactics mode=sed "s/\"//g"
-| mvexpand tactics
-| eval mitre_technique_display=trim(tactics)  
-| where mitre_technique_display!=""
-|fields mitre_technique_display, title]
-
-|stats dc(title) by title
-| fields title</query>
-          <earliest>$earliest$</earliest>
-          <latest>$latest$</latest>
-          <sampleRatio>1</sampleRatio>
-        </search>
-        <option name="count">20</option>
-        <option name="dataOverlayMode">none</option>
-        <option name="drilldown">cell</option>
-        <option name="percentagesRow">false</option>
-        <option name="rowNumbers">false</option>
-        <option name="totalsRow">false</option>
-        <option name="wrap">true</option>
-        <drilldown>
-          <link target="_blank">/app/DA-ESS-ContentUpdate/analytic_story_details?form.analytic_story_name=$row.title$</link>
-        </drilldown>
-      </table>
-    </panel>
-    <panel>
-      <title>Detections with Atomic tests mapping</title>
-      <table>
-        <search>
-          <query>| sseanalytics 
-|mvexpand mitre_technique 
-|search mitre_technique!="None" mitre_technique!="" mitre_technique!="TA*" 
-|table name , mitre_technique, channel
-|lookup atomic-red-windows-tests "Technique #" AS mitre_technique OUTPUT "Test Name" as atomic_test_name
-| eval atomic_test_exists=if(atomic_test_name != "", "1", "0")
-| where atomic_test_exists="1"
-|search mitre_technique=$technique_token$
-|rename mitre_technique as "Candidate Atomic test"
-
-|table name, "Candidate Atomic test", channel</query>
-          <earliest>$earliest$</earliest>
-          <latest>$latest$</latest>
-          <sampleRatio>1</sampleRatio>
-        </search>
-        <option name="count">10</option>
-        <option name="dataOverlayMode">none</option>
-        <option name="drilldown">cell</option>
-        <option name="percentagesRow">false</option>
-        <option name="rowNumbers">false</option>
-        <option name="totalsRow">false</option>
-        <option name="wrap">true</option>
-        <drilldown>
-          <link target="_blank">/app/$row.channel$/showcase_simple_search?ml_toolkit.dataset=$row.name$</link>
-        </drilldown>
-      </table>
-    </panel>
-  </row>
-  <row>
-    <panel>
       <title>Atomic test Techniques available</title>
       <viz type="punchcard_app.punchcard">
-        <search>
-          <query>|inputlookup atomic-red-windows-tests
-| sseidenrichment type=mitreid field="Technique #"
-
-
+        <search base="AtomicRedLookup">
+          <query>|search "Technique #"=$technique_token$ 
 | stats count count("Technique #") by Tactic, "Technique #"
 |sort -count</query>
-          <earliest>$earliest$</earliest>
-          <latest>$latest$</latest>
-          <sampleRatio>1</sampleRatio>
         </search>
         <option name="drilldown">none</option>
         <option name="punchcard_app.punchcard.colorMode">categorical</option>
@@ -242,6 +184,107 @@
         <option name="trellis.scales.shared">1</option>
         <option name="trellis.size">medium</option>
       </viz>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Possible Analytic stories [$story_count$]</title>
+      <table>
+        <title>(Click to view in ESCU)</title>
+        <search base="AtomicRedLookup">
+          <progress>
+            <set token="story_count">$job.resultCount$</set>
+          </progress>
+          <query>|rename "Technique #" as Technique
+| sseidenrichment type=mitreid field=Technique 
+| eval mitre_id = Technique+" - "+mitre_technique_display, atomic_test= 'Test Number'+"-"+'Test Name'
+|lookup mitre_matrix_list_ar Technique AS mitre_technique_display
+
+
+| join type=left max=0 mitre_technique_display 
+   [ | rest /services/configs/conf-analytic_stories splunk_server=local count=0
+|search providing_technologies="*Sysmon*" OR providing_technologies="*Active Directory*" AND providing_technologies!="*AWS*"
+|rex field=mappings ".*,+\s\"mitre_attack\":(?&lt;tactics&gt;.*),+\s\"mitre_technique_id\""
+|rex field=tactics mode=sed "s/\[//g"
+|rex field=tactics mode=sed "s/\]//g"
+| eval tactics=split(tactics, ",")
+|rex field=tactics mode=sed "s/\"//g"
+| mvexpand tactics
+| eval mitre_technique_display=trim(tactics)  
+| where mitre_technique_display!=""
+|fields mitre_technique_display, title]
+|search Technique=$technique_token$
+|stats dc(title) by title
+| fields title</query>
+        </search>
+        <option name="count">20</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">cell</option>
+        <option name="percentagesRow">false</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+        <drilldown>
+          <link target="_blank">/app/DA-ESS-ContentUpdate/analytic_story_details?form.analytic_story_name=$row.title$</link>
+        </drilldown>
+      </table>
+    </panel>
+    <panel depends="$show_breakdown_tactic$">
+      <title>Detections with possible Atomic tests mapping [$detection_count$]</title>
+      <table>
+        <title>*Tactic Name and Technique Name field applies only here</title>
+        <search base="SSEAnalytics">
+          <progress>
+            <set token="detection_count">$job.resultCount$</set>
+          </progress>
+          <query>| mvexpand mitre_technique 
+|search mitre_technique!="None" mitre_technique!="" mitre_technique!="TA*" 
+
+|lookup atomic-red-windows-tests "Technique #" AS mitre_technique OUTPUT "Test Name" as atomic_test_name
+| mvexpand mitre_tactic_display
+| eval atomic_test_exists=if(atomic_test_name != "", "1", "0")
+| eval "Candidate Atomic test"=mitre_technique
+| where atomic_test_exists="1"
+|search mitre_technique=$technique_token$ channel=$channel_token$ mitre_tactic_display=$tactic_name_token$ mitre_technique_display=$technique_name_token$
+|table name, "Candidate Atomic test", mitre_tactic_display,channel</query>
+        </search>
+        <option name="count">10</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">cell</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+    <panel depends="$show_init_tactic$">
+      <title>Detections with possible Atomic tests mapping [$detection_count_default_panel$]</title>
+      <table>
+        <search base="SSEAnalytics">
+          <progress>
+            <set token="detection_count_default_panel">$job.resultCount$</set>
+          </progress>
+          <query>|mvexpand mitre_technique 
+|search mitre_technique!="None" mitre_technique!="" mitre_technique!="TA*" 
+
+|lookup atomic-red-windows-tests "Technique #" AS mitre_technique OUTPUT "Test Name" as atomic_test_name
+| eval atomic_test_exists=if(atomic_test_name != "", "1", "0")
+| eval "Candidate Atomic test"=mitre_technique
+| where atomic_test_exists="1"
+|search mitre_technique="*" channel="*"  mitre_technique_display="***"
+|search mitre_technique=$technique_token$ channel=$channel_token$  mitre_technique_display=$technique_name_token$
+|table name, "Candidate Atomic test",channel</query>
+        </search>
+        <option name="count">10</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+      </table>
     </panel>
   </row>
 </form>

@@ -1,9 +1,9 @@
 <form theme="dark">
   <search id="BaseSearch">
-    <query>index="attack" Technique!="Technique" Technique!=""
+    <query>`get_attack_data`
       | sseidenrichment type=mitreid field=Technique 
       | eval mitre_id = Technique+" - "+mitre_technique_display, atomic_test= 'Test Number'+"-"+'Test Name'
-      |lookup mitre_matrix_list Technique AS mitre_technique_display
+      |lookup mitre_matrix_list_ar Technique AS mitre_technique_display
       |table atomic_test, Hostname,mitre_id,mitre_technique_display,mitre_technique_url,Tactic,Technique,"Test Name", Username
     </query>
     <earliest>$time_token.earliest$</earliest>
@@ -18,23 +18,6 @@
         <earliest>0</earliest>
         <latest></latest>
       </default>
-    </input>
-    <input type="dropdown" token="channel" searchWhenChanged="true">
-      <label>Source</label>
-      <choice value="*">All</choice>
-      <default>*</default>
-      <initialValue>*</initialValue>
-      <fieldForLabel>channel</fieldForLabel>
-      <fieldForValue>channel</fieldForValue>
-      <search>
-        <query>| sseanalytics 
-|stats count by channel
-|fields channel</query>
-        <earliest>-24h@h</earliest>
-        <latest>now</latest>
-      </search>
-      <prefix>"</prefix>
-      <suffix>"</suffix>
     </input>
   </fieldset>
   <row>
@@ -251,8 +234,8 @@
       <title>Executed simulations</title>
       <table>
         <search base="BaseSearch">
-          <query>
-|table atomic_test, Hostname,mitre_id,mitre_technique_display,mitre_technique_url,Tactic,Technique,"Test Name", Username</query>
+          <query>|table atomic_test, Hostname,mitre_id,mitre_technique_display,mitre_technique_url,Tactic,Technique,"Test Name", Username
+        </query>
         </search>
         <option name="count">5</option>
         <option name="dataOverlayMode">none</option>
@@ -263,14 +246,20 @@
         <option name="wrap">true</option>
       </table>
     </panel>
+  </row>
+  <row>
     <panel>
-      <title>Possible Analytic stories</title>
+      <title>Potential Analytic stories [$story_count$]</title>
       <table>
         <search>
-          <query>index="attack" Technique!="Technique"
+          
+      <progress>
+            <set token="story_count">$job.resultCount$</set>
+      </progress>          
+          <query>`get_attack_data`
 | sseidenrichment type=mitreid field=Technique 
 | eval mitre_id = Technique+" - "+mitre_technique_display, atomic_test= 'Test Number'+"-"+'Test Name'
-|lookup mitre_matrix_list Technique AS mitre_technique_display
+|lookup mitre_matrix_list_ar Technique AS mitre_technique_display
 
 
 | join type=left max=0 mitre_technique_display 
@@ -286,45 +275,57 @@
 | where mitre_technique_display!=""
 |fields mitre_technique_display, title]
 
-|stats dc(title) by title
-| fields title</query>
+|eval view="View [ESCU]"
+|eval execute="Execute [ASX]"
+|stats dc(title) by title, view, execute
+| fields title, view, execute</query>
           <earliest>$time_token.earliest$</earliest>
           <latest>$time_token.latest$</latest>
           <sampleRatio>1</sampleRatio>
         </search>
         <option name="count">20</option>
         <option name="dataOverlayMode">none</option>
-        <option name="drilldown">cell</option>
+        <option name="drilldown">row</option>
         <option name="percentagesRow">false</option>
         <option name="rowNumbers">false</option>
         <option name="totalsRow">false</option>
         <option name="wrap">true</option>
         <drilldown>
-          <link target="_blank">/app/Splunk_Analytic_Story_Execution/analytic_story_execution?earliest=-24h%2540h&amp;latest=now&amp;form.title=$row.title$</link>
+          <condition field="view">
+            <link target="_blank">/app/DA-ESS-ContentUpdate/analytic_story_details?form.analytic_story_name=$click.value$</link>
+          </condition>
+          <condition field="title">
+            <link target="_blank">/app/DA-ESS-ContentUpdate/analytic_story_details?form.analytic_story_name=$click.value$</link>
+          </condition>
+          <condition field="execute">
+            <link target="_blank">/app/Splunk_ASX/execute?form.mode=now&amp;form.time.earliest=-24h@h&amp;form.time.latest=now&amp;form.story=$row.title$</link>
+          </condition>
         </drilldown>
       </table>
     </panel>
-  </row>
-  <row>
     <panel>
-      <title>Detections with Atomic tests mapping</title>
+      <title>Potential detections [$detection_count$]</title>
+ 
       <table>
+
         <search>
-          <query>| sseanalytics 
-|mvexpand mitre_technique 
-|search mitre_technique!="None" mitre_technique!="" mitre_technique!="TA*" 
-|table name , mitre_technique, channel
-|lookup atomic-red-windows-tests "Technique #" AS mitre_technique OUTPUT "Test Name" as atomic_test_name
-| eval atomic_test_exists=if(atomic_test_name != "", "1", "0")
-| where atomic_test_exists="1"
-|search channel=$channel$
-|rename mitre_technique as "Candidate Atomic test"
-|table name, "Candidate Atomic test", channel</query>
-          <earliest>-24h@h</earliest>
-          <latest>now</latest>
+      <progress>
+            <set token="detection_count">$job.resultCount$</set>
+      </progress>
+          <query>`get_attack_data`
+|rename Technique as mitre_technique
+
+| join type=left max=0 mitre_technique
+[| sseanalytics
+|search mitre_technique!="None"
+|mvexpand mitre_technique]
+|stats dc(name) by name,mitre_technique,channel
+|table name, mitre_technique, channel</query>
+          <earliest>$time_token.earliest$</earliest>
+          <latest>$time_token.latest$</latest>
           <sampleRatio>1</sampleRatio>
         </search>
-        <option name="count">20</option>
+        <option name="count">10</option>
         <option name="dataOverlayMode">none</option>
         <option name="drilldown">none</option>
         <option name="percentagesRow">false</option>
