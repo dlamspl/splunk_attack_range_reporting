@@ -1,10 +1,9 @@
 <form theme="dark">
   <search id="BaseSearch">
     <query>`get_attack_data`
-      | sseidenrichment type=mitreid field=Technique 
-      | eval mitre_id = Technique+" - "+mitre_technique_display, atomic_test= 'Test Number'+"-"+'Test Name'
-      |lookup mitre_matrix_list_ar Technique AS mitre_technique_display
-      |table atomic_test, Hostname,mitre_id,mitre_technique_display,mitre_technique_url,Tactic,Technique,"Test Name", Username
+      |lookup enterprise-attack-lookup Technique
+      | eval mitre_id = Technique+" - "+mitre_technique_display, atomic_test= 'Test Number'+"-"+'Test Name' 
+      | table atomic_test, Hostname,mitre_id,mitre_technique_display,mitre_technique_url,Tactic,Technique,"Test Name", Username
     </query>
     <earliest>$time_token.earliest$</earliest>
     <latest>$time_token.latest$</latest>
@@ -253,28 +252,24 @@
       <title>Potential Analytic stories [$story_count$]</title>
       <table>
         <search>
-          
-      <progress>
+          <progress>
             <set token="story_count">$job.resultCount$</set>
-      </progress>          
+          </progress>
           <query>`get_attack_data`
-| sseidenrichment type=mitreid field=Technique 
+|lookup enterprise-attack-lookup Technique
 | eval mitre_id = Technique+" - "+mitre_technique_display, atomic_test= 'Test Number'+"-"+'Test Name'
-|lookup mitre_matrix_list_ar Technique AS mitre_technique_display
 
-
-| join type=left max=0 mitre_technique_display 
+| join type=left max=0 Technique 
    [ | rest /services/configs/conf-analytic_stories splunk_server=local count=0
-|search providing_technologies="*Sysmon*" OR providing_technologies="*Active Directory*" AND providing_technologies!="*AWS*"
-|rex field=mappings ".*,+\s\"mitre_attack\":(?&lt;tactics&gt;.*),+\s\"mitre_technique_id\""
-|rex field=tactics mode=sed "s/\[//g"
-|rex field=tactics mode=sed "s/\]//g"
-| eval tactics=split(tactics, ",")
-|rex field=tactics mode=sed "s/\"//g"
-| mvexpand tactics
-| eval mitre_technique_display=trim(tactics)  
-| where mitre_technique_display!=""
-|fields mitre_technique_display, title]
+|rex field=mappings ".*,+\s\"mitre_attack\":(?&lt;technique&gt;.*),+\s\"nist\""
+|rex field=technique mode=sed "s/\[//g"
+|rex field=technique mode=sed "s/\]//g"
+| eval technique=split(technique, ",")
+|rex field=technique mode=sed "s/\"//g"
+| mvexpand technique
+| eval Technique=trim(technique)  
+| where Technique!=""
+|fields Technique, title]
 
 |eval view="View [ESCU]"
 |eval execute="Execute [ASX]"
@@ -288,6 +283,7 @@
         <option name="dataOverlayMode">none</option>
         <option name="drilldown">row</option>
         <option name="percentagesRow">false</option>
+        <option name="refresh.display">progressbar</option>
         <option name="rowNumbers">false</option>
         <option name="totalsRow">false</option>
         <option name="wrap">true</option>
@@ -306,13 +302,11 @@
     </panel>
     <panel>
       <title>Potential detections [$detection_count$]</title>
- 
       <table>
-
         <search>
-      <progress>
+          <progress>
             <set token="detection_count">$job.resultCount$</set>
-      </progress>
+          </progress>
           <query>`get_attack_data`
 |rename Technique as mitre_technique
 

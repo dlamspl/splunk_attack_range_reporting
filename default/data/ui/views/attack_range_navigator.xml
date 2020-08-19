@@ -59,7 +59,7 @@
         </condition>
       </change>
       <search>
-        <query>|inputlookup mitre_matrix_list_ar|dedup Tactic |fields Tactic</query>
+        <query>|inputlookup enterprise-attack-lookup|dedup Tactic |fields Tactic</query>
         <earliest>-24h@h</earliest>
         <latest>now</latest>
       </search>
@@ -74,7 +74,7 @@
       <fieldForLabel>Technique</fieldForLabel>
       <fieldForValue>Technique</fieldForValue>
       <search>
-        <query>|inputlookup mitre_matrix_list_ar|dedup Technique |fields Technique</query>
+        <query>|inputlookup enterprise-attack-lookup|dedup Technique |fields Technique</query>
         <earliest>-24h@h</earliest>
         <latest>now</latest>
       </search>
@@ -195,27 +195,27 @@
           <progress>
             <set token="story_count">$job.resultCount$</set>
           </progress>
-          <query>|rename "Technique #" as Technique
-| sseidenrichment type=mitreid field=Technique 
+          <query>| rename "Technique #" as Technique
+
+|lookup enterprise-attack-lookup Technique
 | eval mitre_id = Technique+" - "+mitre_technique_display, atomic_test= 'Test Number'+"-"+'Test Name'
-|lookup mitre_matrix_list_ar Technique AS mitre_technique_display
 
-
-| join type=left max=0 mitre_technique_display 
+| join type=left max=0 Technique 
    [ | rest /services/configs/conf-analytic_stories splunk_server=local count=0
-|search providing_technologies="*Sysmon*" OR providing_technologies="*Active Directory*" AND providing_technologies!="*AWS*"
-|rex field=mappings ".*,+\s\"mitre_attack\":(?&lt;tactics&gt;.*),+\s\"mitre_technique_id\""
-|rex field=tactics mode=sed "s/\[//g"
-|rex field=tactics mode=sed "s/\]//g"
-| eval tactics=split(tactics, ",")
-|rex field=tactics mode=sed "s/\"//g"
-| mvexpand tactics
-| eval mitre_technique_display=trim(tactics)  
-| where mitre_technique_display!=""
-|fields mitre_technique_display, title]
-|search Technique=$technique_token$
-|stats dc(title) by title
-| fields title</query>
+|rex field=mappings ".*,+\s\"mitre_attack\":(?&lt;technique&gt;.*),+\s\"nist\""
+|rex field=technique mode=sed "s/\[//g"
+|rex field=technique mode=sed "s/\]//g"
+| eval technique=split(technique, ",")
+|rex field=technique mode=sed "s/\"//g"
+| mvexpand technique
+| eval Technique=trim(technique)  
+| where Technique!=""
+|fields Technique, title]
+
+|eval view="View [ESCU]"
+|eval execute="Execute [ASX]"
+|stats dc(title) by title, view, execute
+| fields title, view, execute</query>
         </search>
         <option name="count">20</option>
         <option name="dataOverlayMode">none</option>

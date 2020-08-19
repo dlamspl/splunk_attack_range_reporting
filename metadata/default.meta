@@ -28,7 +28,7 @@ modtime = 1586836655.568709000
 version = 8.0.1
 modtime = 1586922601.443066000
 
-[transforms/mitre_matrix_list_ar]
+[transforms/enterprise-attack-lookup]
 access = read : [ * ]
 export = none
 owner = admin
@@ -56,7 +56,7 @@ owner = admin
 version = 8.0.1
 modtime = 1587043563.477440000
 
-[lookups/mitre_matrix_list_ar.csv]
+[lookups/enterprise-attack.csv]
 access = read : [ * ]
 export = none
 owner = admin
