@@ -250,6 +250,7 @@
   <row>
     <panel>
       <title>Potential Analytic stories [$story_count$]</title>
+      <html><span><b>Note:</b> The &quot;View [ES]&quot; links will ony work if you have Splunk Eterprise Security installed as part of Attack Range.</span></html>
       <table>
         <search>
           <progress>
@@ -289,10 +290,10 @@
         <option name="wrap">true</option>
         <drilldown>
           <condition field="view">
-            <link target="_blank">/app/DA-ESS-ContentUpdate/analytic_story_details?form.analytic_story_name=$click.value$</link>
+            <link target="_blank">/app/SplunkEnterpriseSecuritySuite/ess_analytic_story_details?analytic_story=$click.value$</link>
           </condition>
           <condition field="title">
-            <link target="_blank">/app/DA-ESS-ContentUpdate/analytic_story_details?form.analytic_story_name=$click.value$</link>
+            <link target="_blank">/app/SplunkEnterpriseSecuritySuite/ess_analytic_story_details?analytic_story=$click.value$</link>
           </condition>
           <condition field="execute">
             <link target="_blank">/app/Splunk_ASX/execute?form.mode=now&amp;form.time.earliest=-24h@h&amp;form.time.latest=now&amp;form.story=$row.title$</link>
@@ -308,14 +309,16 @@
             <set token="detection_count">$job.resultCount$</set>
           </progress>
           <query>`get_attack_data`
-|rename Technique as mitre_technique
-
+| rename Technique as mitre_technique
 | join type=left max=0 mitre_technique
-[| sseanalytics
-|search mitre_technique!="None"
-|mvexpand mitre_technique]
-|stats dc(name) by name,mitre_technique,channel
-|table name, mitre_technique, channel</query>
+[   
+  | sseanalytics
+  | search mitre_id!="None"
+  | mvexpand mitre_id
+  | rename mitre_id as mitre_technique
+]
+| stats dc(name) by name,mitre_technique,channel
+| table name, mitre_technique, channel</query>
           <earliest>$time_token.earliest$</earliest>
           <latest>$time_token.latest$</latest>
           <sampleRatio>1</sampleRatio>
