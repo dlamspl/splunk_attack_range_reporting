@@ -8,6 +8,21 @@
     <earliest>$time_token.earliest$</earliest>
     <latest>$time_token.latest$</latest>
   </search>
+  <!-- Check if ES is installed, and prefix the ES Analytic Story Link field with "_" if not (which hides it in a table) -->
+  <search id="BaseESInstalledSearch">
+    <query>
+      | rest /services/apps/local 
+      | where title = "SplunkEnterpriseSecuritySuite"
+    </query>
+    <finalized >
+      <condition match=" 'job.resultCount' != 0">
+          <set token="filterESLink">noop</set>
+       </condition>
+       <condition>
+          <set token="filterESLink">rename view_es as _view_es</set>
+       </condition>
+    </finalized >      
+  </search>
   <label>Attack Range Dashboard</label>
   <description>Shows tests already run and relevant statistics in addition to possible analytic stories for executed tests. Currently supports only Atomic Red tests</description>
   <fieldset submitButton="false">
@@ -250,32 +265,41 @@
   <row>
     <panel>
       <title>Potential Analytic stories [$story_count$]</title>
-      <html><span><b>Note:</b> The &quot;View [ES]&quot; links will ony work if you have Splunk Eterprise Security installed as part of Attack Range.</span></html>
       <table>
         <search>
           <progress>
             <set token="story_count">$job.resultCount$</set>
           </progress>
+          <!-- Note: The link to SSE is not used yet - as it's not ready at this point - it's a placeholder for now -->
+          <!-- Note: The _docs_title field turns the Analytic Story into the HREF Anchor format used in the documentation, for example: Cloud Federated Credential Abuse -> Cloud_federated_credential_abuse. 
+               and also normalizes the field for other fringe cases (duplicate spaces, extra spaces at the end, etc.) -->
           <query>`get_attack_data`
-|lookup enterprise-attack-lookup Technique
+| lookup enterprise-attack-lookup Technique
 | eval mitre_id = Technique+" - "+mitre_technique_display, atomic_test= 'Test Number'+"-"+'Test Name'
 
 | join type=left max=0 Technique 
-   [ | rest /services/configs/conf-analytic_stories splunk_server=local count=0
-|rex field=mappings ".*,+\s\"mitre_attack\":(?&lt;technique&gt;.*),+\s\"nist\""
-|rex field=technique mode=sed "s/\[//g"
-|rex field=technique mode=sed "s/\]//g"
-| eval technique=split(technique, ",")
-|rex field=technique mode=sed "s/\"//g"
-| mvexpand technique
-| eval Technique=trim(technique)  
-| where Technique!=""
-|fields Technique, title]
-
-|eval view="View [ESCU]"
-|eval execute="Execute [ASX]"
-|stats dc(title) by title, view, execute
-| fields title, view, execute</query>
+   [
+     | rest /services/configs/conf-analytic_stories splunk_server=local count=0
+     | rex field=mappings ".*,+\s\"mitre_attack\":(?&lt;technique&gt;.*),+\s\"nist\""
+     | rex field=technique mode=sed "s/\[//g"
+     | rex field=technique mode=sed "s/\]//g"
+     | eval technique=split(technique, ",")
+     | rex field=technique mode=sed "s/\"//g"
+     | mvexpand technique
+     | eval Technique=trim(technique)  
+     | where Technique!=""
+     | fields Technique, title
+   ]
+| eval view_es="View [ES]"
+| eval view_sse="View [SSE]"
+| eval view_docs="View [Docs]"
+| eval execute="Execute [ASX]"
+| eval _docs_title = trim(replace(title, "\s+", " "))
+| eval _docs_title = upper(substr(mvjoin(split(lower(_docs_title), " "), "_"),1,1)).substr(mvjoin(split(lower(_docs_title), " "), "_"), 2)
+| stats dc(title) by title, _docs_title, view_es, view_docs, execute
+| fields title, _docs_title, view_es, view_docs, execute
+| $filterESLink$
+          </query>
           <earliest>$time_token.earliest$</earliest>
           <latest>$time_token.latest$</latest>
           <sampleRatio>1</sampleRatio>
@@ -288,12 +312,20 @@
         <option name="rowNumbers">false</option>
         <option name="totalsRow">false</option>
         <option name="wrap">true</option>
+        <fields>$result.fieldList$</fields>
         <drilldown>
-          <condition field="view">
+          <condition field="view_es">
             <link target="_blank">/app/SplunkEnterpriseSecuritySuite/ess_analytic_story_details?analytic_story=$click.value$</link>
           </condition>
+          <!--<condition field="view_sse">
+            <link target="_blank">/app/Splunk_Security_Essentials/TBD?=$click.value$</link>
+          </condition>-->
+          <condition field="view_docs">
+            <link target="_blank">https://docs.splunk.com/Documentation/ESSOC/latest/stories/UseCase#$row._docs_title$</link>
+          </condition>
+          <!-- Default link is the documentation -->
           <condition field="title">
-            <link target="_blank">/app/SplunkEnterpriseSecuritySuite/ess_analytic_story_details?analytic_story=$click.value$</link>
+            <link target="_blank">https://docs.splunk.com/Documentation/ESSOC/latest/stories/UseCase#$row._docs_title$</link>
           </condition>
           <condition field="execute">
             <link target="_blank">/app/Splunk_ASX/execute?form.mode=now&amp;form.time.earliest=-24h@h&amp;form.time.latest=now&amp;form.story=$row.title$</link>
@@ -309,16 +341,14 @@
             <set token="detection_count">$job.resultCount$</set>
           </progress>
           <query>`get_attack_data`
-| rename Technique as mitre_technique
+|rename Technique as mitre_technique
 | join type=left max=0 mitre_technique
-[   
-  | sseanalytics
-  | search mitre_id!="None"
-  | mvexpand mitre_id
-  | rename mitre_id as mitre_technique
-]
-| stats dc(name) by name,mitre_technique,channel
-| table name, mitre_technique, channel</query>
+[| sseanalytics
+|search mitre_id!="None"
+|mvexpand mitre_id
+|rename mitre_id as mitre_technique]
+|stats dc(name) by name,mitre_technique,channel
+|table name, mitre_technique, channel</query>
           <earliest>$time_token.earliest$</earliest>
           <latest>$time_token.latest$</latest>
           <sampleRatio>1</sampleRatio>
