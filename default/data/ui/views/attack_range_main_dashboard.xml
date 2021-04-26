@@ -312,7 +312,6 @@
         <option name="rowNumbers">false</option>
         <option name="totalsRow">false</option>
         <option name="wrap">true</option>
-        <fields>$result.fieldList$</fields>
         <drilldown>
           <condition field="view_es">
             <link target="_blank">/app/SplunkEnterpriseSecuritySuite/ess_analytic_story_details?analytic_story=$click.value$</link>
