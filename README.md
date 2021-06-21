@@ -38,3 +38,5 @@ Finally there is a dashboard made with Splunk dashboards - Beta which looks nice
 
 ![Main - Beta](appserver/static/docs/img/ar_dashboards_beta_preview.png?raw=true "Main-Beta")
 
+## Contributors
+[Christian Cloutier](https://github.com/ccloutier-splunk)
