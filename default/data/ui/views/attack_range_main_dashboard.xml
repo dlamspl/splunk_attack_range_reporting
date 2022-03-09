@@ -2,8 +2,9 @@
   <search id="BaseSearch">
     <query>`get_attack_data`
       |lookup enterprise-attack-lookup Technique
-      | eval mitre_id = Technique+" - "+mitre_technique_display, atomic_test= 'Test Number'+"-"+'Test Name' 
-      | table atomic_test, Hostname,mitre_id,mitre_technique_display,mitre_technique_url,Tactic,Technique,"Test Name", Username
+      | eval mitre_id = Technique + " - " + mitre_technique_display, atomic_test = 'Test Number' + "-" + 'Test Name' 
+      | sort -_time
+      | table atomic_test, Hostname, mitre_id, mitre_technique_display, mitre_technique_url, Tactic, Technique, "Test Name", Username
     </query>
     <earliest>$time_token.earliest$</earliest>
     <latest>$time_token.latest$</latest>
@@ -14,17 +15,34 @@
       | rest /services/apps/local 
       | where title = "SplunkEnterpriseSecuritySuite"
     </query>
-    <finalized >
+    <finalized>
       <condition match=" 'job.resultCount' != 0">
-          <set token="filterESLink">noop</set>
-       </condition>
-       <condition>
-          <set token="filterESLink">rename view_es as _view_es</set>
-       </condition>
-    </finalized >      
+        <set token="filterESLink">noop</set>
+      </condition>
+      <condition>
+        <set token="filterESLink">rename view_es as _view_es</set>
+      </condition>
+    </finalized>
+  </search>
+  <!-- Check if the SanKey Visualiztion is installed, and inform the user if not (and adapt the relevant panel content accordingly) -->
+  <search id="SanskeyInstalledSearch">
+    <query>
+      | rest /services/apps/local 
+      | where title = "sankey_diagram_app"
+    </query>
+    <finalized>
+      <condition match=" 'job.resultCount' != 0">
+        <set token="SanskeyInstalled">1</set>
+        <unset token="SanskeyNotInstalled"></unset>
+      </condition>
+      <condition>
+        <unset token="SanskeyInstalled"></unset>
+        <set token="SanskeyNotInstalled">1</set>
+      </condition>
+    </finalized>
   </search>
   <label>Attack Range Dashboard</label>
-  <description>Shows tests already run and relevant statistics in addition to possible analytic stories for executed tests. Currently supports only Atomic Red tests</description>
+  <description>Shows tests already run and relevant statistics in addition to possible Analytic Stories/Detections that might be used to detect executed tests.  Currently supports only Atomic Red tests.</description>
   <fieldset submitButton="false">
     <input type="time" token="time_token" searchWhenChanged="true">
       <label>Time range</label>
@@ -39,7 +57,7 @@
       <title># Simulations run</title>
       <viz type="status_indicator_app.status_indicator">
         <search base="BaseSearch">
-          <query>|stats count</query>
+          <query>| stats count</query>
         </search>
         <option name="status_indicator_app.status_indicator.colorBy">static_color</option>
         <option name="status_indicator_app.status_indicator.fillTarget">text</option>
@@ -57,7 +75,7 @@
       <title># MITRE ATT&amp;CK Tactics</title>
       <viz type="status_indicator_app.status_indicator">
         <search base="BaseSearch">
-          <query>|stats dc(Tactic)</query>
+          <query>| stats dc(Tactic)</query>
         </search>
         <option name="drilldown">none</option>
         <option name="refresh.display">progressbar</option>
@@ -80,7 +98,7 @@
       <title># MITRE ATT&amp;CK Techniques</title>
       <viz type="status_indicator_app.status_indicator">
         <search base="BaseSearch">
-          <query>|stats dc(Technique)</query>
+          <query>| stats dc(Technique)</query>
         </search>
         <option name="drilldown">none</option>
         <option name="refresh.display">progressbar</option>
@@ -105,7 +123,7 @@
       <title>Attack username</title>
       <chart>
         <search base="BaseSearch">
-          <query>|stats count by Username</query>
+          <query>| stats count by Username</query>
         </search>
         <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
         <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
@@ -145,7 +163,7 @@
       <title>Target hosts</title>
       <chart>
         <search base="BaseSearch">
-          <query>|stats count by Hostname</query>
+          <query>| stats count by Hostname</query>
         </search>
         <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
         <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
@@ -187,7 +205,7 @@
       <title>Tactics simulated</title>
       <chart>
         <search base="BaseSearch">
-          <query>|stats count by Tactic</query>
+          <query>| stats count by Tactic</query>
         </search>
         <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
         <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
@@ -245,11 +263,49 @@
     </panel>
   </row>
   <row>
+    <panel depends="$SanskeyInstalled$">
+      <title>Executed Simulations [$simulation_count$]</title>
+      <viz type="sankey_diagram_app.sankey_diagram">
+        <search>
+          <progress>
+            <set token="simulation_count">$job.resultCount$</set>
+          </progress>
+          <query>`get_attack_data`
+| lookup enterprise-attack-lookup Technique
+| eval Label = Tactic + " - " + mitre_tactic_display 
+| eval Label2 = Technique + " - " + mitre_technique_display 
+| stats count by Label2, Label
+| table Label, Label2, count
+| rename Label as step1, Label2 as step2
+| append [
+   search `get_attack_data`
+   | lookup enterprise-attack-lookup Technique
+   | eval Label = Technique + " - " + mitre_technique_display 
+   | eventstats dc("Test Name") as count by Label, Tactic, "Test Name"
+   | table Label, "Test Name", count
+   | rename Label as step1, "Test Name" as step2
+]</query>
+          <earliest>$time_token.earliest$</earliest>
+          <latest>$time_token.latest$</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </viz>
+    </panel>
+    <panel depends="$SanskeyNotInstalled$">
+      <html>
+        <p>In order for this panel to show properly, please install the SanKey visualization available <a href="https://splunkbase.splunk.com/app/3112/">here</a></p>
+      </html>
+    </panel>
+  </row>
+  <row>
     <panel>
-      <title>Executed simulations</title>
+      <title>Executed Simulations [$simulation_count$] - Details</title>
       <table>
         <search base="BaseSearch">
-          <query>|table atomic_test, Hostname,mitre_id,mitre_technique_display,mitre_technique_url,Tactic,Technique,"Test Name", Username
+          <progress>
+            <set token="simulation_count">$job.resultCount$</set>
+          </progress>
+          <query>| rename atomic_test as "Atomic Red Test", mitre_id as "MITRE ID", mitre_technique_display as "Name", mitre_technique_url as "Technique URL", Username as "User Name"
         </query>
         </search>
         <option name="count">5</option>
@@ -275,29 +331,29 @@
                and also normalizes the field for other fringe cases (duplicate spaces, extra spaces at the end, etc.) -->
           <query>`get_attack_data`
 | lookup enterprise-attack-lookup Technique
-| eval mitre_id = Technique+" - "+mitre_technique_display, atomic_test= 'Test Number'+"-"+'Test Name'
-
-| join type=left max=0 Technique 
-   [
-     | rest /services/configs/conf-analytic_stories splunk_server=local count=0
-     | rex field=mappings ".*,+\s\"mitre_attack\":(?&lt;technique&gt;.*),+\s\"nist\""
-     | rex field=technique mode=sed "s/\[//g"
-     | rex field=technique mode=sed "s/\]//g"
-     | eval technique=split(technique, ",")
-     | rex field=technique mode=sed "s/\"//g"
-     | mvexpand technique
-     | eval Technique=trim(technique)  
-     | where Technique!=""
-     | fields Technique, title
-   ]
+| rename Technique as mitre_attack 
+| stats count by mitre_attack
+| fields mitre_attack
+| join mitre_attack max=0 [ 
+   | rest /services/configs/conf-savedsearches splunk_server=local count=0 
+   | search action.escu.search_type = detection 
+   | spath input=action.correlationsearch.annotations path=analytic_story{} output="analytic_story" 
+   | spath input=action.correlationsearch.annotations path=mitre_attack{} output="mitre_attack" 
+   | fields analytic_story, mitre_attack, title
+   | mvexpand mitre_attack
+   | search mitre_attack!=""
+   | stats dc(title) as detections by analytic_story, mitre_attack
+]
 | eval view_es="View [ES]"
 | eval view_sse="View [SSE]"
 | eval view_docs="View [Docs]"
 | eval execute="Execute [ASX]"
+| rename analytic_story as title
 | eval _docs_title = trim(replace(title, "\s+", " "))
-| eval _docs_title = upper(substr(mvjoin(split(lower(_docs_title), " "), "_"),1,1)).substr(mvjoin(split(lower(_docs_title), " "), "_"), 2)
-| stats dc(title) by title, _docs_title, view_es, view_docs, execute
-| fields title, _docs_title, view_es, view_docs, execute
+| eval _docs_title = lower(substr(mvjoin(split(lower(_docs_title), " "), "_"),1,1)).substr(mvjoin(split(lower(_docs_title), " "), "_"), 2)
+| fields title, mitre_attack, detections, _docs_title, view_es, view_docs, execute
+| eval _title = title
+| rename title as "Analytic Story", mitre_attack as "Att&amp;ck Technique", detections as "Detections", view_es as "ES Link", view_docs as "Docs Link", execute as "Run in ASX"
 | $filterESLink$
           </query>
           <earliest>$time_token.earliest$</earliest>
@@ -313,21 +369,21 @@
         <option name="totalsRow">false</option>
         <option name="wrap">true</option>
         <drilldown>
-          <condition field="view_es">
+          <condition field="ES Link">
             <link target="_blank">/app/SplunkEnterpriseSecuritySuite/ess_analytic_story_details?analytic_story=$click.value$</link>
           </condition>
-          <!--<condition field="view_sse">
+          <!--<condition field="SSE Link">
             <link target="_blank">/app/Splunk_Security_Essentials/TBD?=$click.value$</link>
           </condition>-->
-          <condition field="view_docs">
-            <link target="_blank">https://docs.splunk.com/Documentation/ESSOC/latest/stories/UseCase#$row._docs_title$</link>
+          <condition field="Docs Link">
+            <link target="_blank">https://research.splunk.com/stories/$row._docs_title$</link>
           </condition>
           <!-- Default link is the documentation -->
-          <condition field="title">
-            <link target="_blank">https://docs.splunk.com/Documentation/ESSOC/latest/stories/UseCase#$row._docs_title$</link>
+          <condition field="Analytic Story">
+            <link target="_blank">https://research.splunk.com/stories/$row._docs_title$</link>
           </condition>
-          <condition field="execute">
-            <link target="_blank">/app/Splunk_ASX/execute?form.mode=now&amp;form.time.earliest=-24h@h&amp;form.time.latest=now&amp;form.story=$row.title$</link>
+          <condition field="Run in ASX">
+            <link target="_blank">/app/Splunk_ASX/execute?form.mode=now&amp;form.time.earliest=-24h@h&amp;form.time.latest=now&amp;form.story=$row._title$</link>
           </condition>
         </drilldown>
       </table>
@@ -340,14 +396,16 @@
             <set token="detection_count">$job.resultCount$</set>
           </progress>
           <query>`get_attack_data`
-|rename Technique as mitre_technique
+| rename Technique as mitre_technique
 | join type=left max=0 mitre_technique
-[| sseanalytics
-|search mitre_id!="None"
-|mvexpand mitre_id
-|rename mitre_id as mitre_technique]
-|stats dc(name) by name,mitre_technique,channel
-|table name, mitre_technique, channel</query>
+  [| sseanalytics
+  | search mitre_id!="None"
+  | mvexpand mitre_id
+  | rename mitre_id as mitre_technique]
+| stats dc(name) by name, mitre_technique, displayapp
+| table name, mitre_technique, displayapp
+| rename name as "Detection", mitre_technique as "Att&amp;ck Technique", displayapp as "Source"
+          </query>
           <earliest>$time_token.earliest$</earliest>
           <latest>$time_token.latest$</latest>
           <sampleRatio>1</sampleRatio>

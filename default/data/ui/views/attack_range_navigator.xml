@@ -4,7 +4,7 @@
     <unset token="show_breakdown_tactic"></unset>
   </init>
   <search id="AtomicRedLookup">
-    <query>|inputlookup atomic-red-windows-tests
+    <query>| inputlookup atomic-red-windows-tests
     </query>
   </search>
   <search id="SSEAnalytics">
@@ -19,10 +19,10 @@
       <choice value="*">All</choice>
       <default>*</default>
       <initialValue>*</initialValue>
-      <fieldForLabel>channel</fieldForLabel>
+      <fieldForLabel>displayapp</fieldForLabel>
       <fieldForValue>channel</fieldForValue>
-      <search>
-        <query>| sseanalytics |stats count by channel|fields channel</query>
+      <search base="SSEAnalytics">
+        <query>| stats count by displayapp, channel | fields displayapp, channel</query>
       </search>
       <prefix>"</prefix>
       <suffix>"</suffix>
@@ -31,10 +31,14 @@
       <choice value="*">All</choice>
       <prefix>"</prefix>
       <suffix>"</suffix>
-      <fieldForLabel>mitre_id</fieldForLabel>
+      <fieldForLabel>Label</fieldForLabel>
       <fieldForValue>mitre_id</fieldForValue>
-      <search>
-        <query>|inputlookup atomic-red-windows-tests|dedup "Technique #"|rename "Technique #" as mitre_id|fields mitre_id</query>
+      <search base="AtomicRedLookup">
+        <query>| dedup "Technique #" 
+| rename "Technique #" as mitre_id 
+| eval Label = mitre_id + " - " + 'Technique Name'
+| fields mitre_id, Label 
+| sort mitre_id</query>
       </search>
       <default>*</default>
       <initialValue>*</initialValue>
@@ -46,7 +50,7 @@
       <prefix>"</prefix>
       <suffix>"</suffix>
       <initialValue>*</initialValue>
-      <fieldForLabel>Tactic</fieldForLabel>
+      <fieldForLabel>Label</fieldForLabel>
       <fieldForValue>Tactic</fieldForValue>
       <change>
         <condition match="$tactic_name_token$!=&quot;*&quot; ">
@@ -59,7 +63,11 @@
         </condition>
       </change>
       <search>
-        <query>|inputlookup enterprise-attack-lookup|dedup Tactic |fields Tactic</query>
+        <query>| inputlookup enterprise-attack-lookup 
+| dedup Tactic 
+| eval Label = Tactic + " - " + mitre_tactic_display
+| fields Tactic, Label
+| sort Tactic</query>
         <earliest>-24h@h</earliest>
         <latest>now</latest>
       </search>
@@ -71,10 +79,12 @@
       <prefix>"*</prefix>
       <suffix>*"</suffix>
       <initialValue>*</initialValue>
-      <fieldForLabel>Technique</fieldForLabel>
+      <fieldForLabel>Label</fieldForLabel>
       <fieldForValue>Technique</fieldForValue>
       <search>
-        <query>|inputlookup enterprise-attack-lookup|dedup Technique |fields Technique</query>
+        <query>| inputlookup enterprise-attack-lookup | dedup Technique | fields Technique, mitre_technique_display
+| eval Label = Technique + " - " + mitre_technique_display
+| sort Technique</query>
         <earliest>-24h@h</earliest>
         <latest>now</latest>
       </search>
@@ -85,7 +95,7 @@
       <title># Available Atomic Red tests</title>
       <single>
         <search base="AtomicRedLookup">
-          <query>|search "Technique #"=$technique_token$|stats count</query>
+          <query>| search "Technique #"=$technique_token$ | stats count</query>
         </search>
         <option name="drilldown">all</option>
         <option name="refresh.display">progressbar</option>
@@ -95,7 +105,7 @@
       <title># MITRE ATT&amp;CK Tactics</title>
       <single>
         <search base="AtomicRedLookup">
-          <query>|search "Technique #"=$technique_token$ |stats dc("Tactic")</query>
+          <query>| search "Technique #" = $technique_token$ | stats dc("Tactic")</query>
         </search>
         <option name="drilldown">none</option>
         <option name="refresh.display">progressbar</option>
@@ -108,7 +118,7 @@
       <title># MITRE ATT&amp;CK Techniques</title>
       <single>
         <search base="AtomicRedLookup">
-          <query>|search "Technique #"=$technique_token$|stats dc("Technique #")</query>
+          <query>|search "Technique #" = $technique_token$ | stats dc("Technique #")</query>
         </search>
         <option name="drilldown">none</option>
         <option name="rangeColors">["0x53a051","0xf1813f"]</option>
@@ -125,7 +135,7 @@
       <title>Atomic Red test Tactics</title>
       <chart>
         <search base="AtomicRedLookup">
-          <query>|search "Technique #"=$technique_token$ |stats count by Tactic</query>
+          <query>| search "Technique #" = $technique_token$ | stats count by Tactic</query>
         </search>
         <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
         <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
@@ -167,9 +177,9 @@
       <title>Atomic test Techniques available</title>
       <viz type="punchcard_app.punchcard">
         <search base="AtomicRedLookup">
-          <query>|search "Technique #"=$technique_token$ 
+          <query>| search "Technique #" = $technique_token$ 
 | stats count count("Technique #") by Tactic, "Technique #"
-|sort -count</query>
+| sort -count</query>
         </search>
         <option name="drilldown">none</option>
         <option name="punchcard_app.punchcard.colorMode">categorical</option>
@@ -188,34 +198,37 @@
   </row>
   <row>
     <panel>
-      <title>Possible Analytic stories [$story_count$]</title>
+      <title>Possible Analytic Stories [$story_count$]</title>
       <table>
         <title>(Click to view in ESCU)</title>
         <search base="AtomicRedLookup">
           <progress>
             <set token="story_count">$job.resultCount$</set>
           </progress>
-          <query>| rename "Technique #" as Technique
-
-|lookup enterprise-attack-lookup Technique
-| eval mitre_id = Technique+" - "+mitre_technique_display, atomic_test= 'Test Number'+"-"+'Test Name'
-
-| join type=left max=0 Technique 
-   [ | rest /services/configs/conf-analytic_stories splunk_server=local count=0
-|rex field=mappings ".*,+\s\"mitre_attack\":(?&lt;technique&gt;.*),+\s\"nist\""
-|rex field=technique mode=sed "s/\[//g"
-|rex field=technique mode=sed "s/\]//g"
-| eval technique=split(technique, ",")
-|rex field=technique mode=sed "s/\"//g"
-| mvexpand technique
-| eval Technique=trim(technique)  
-| where Technique!=""
-|fields Technique, title]
-
-|eval view="View [ESCU]"
-|eval execute="Execute [ASX]"
-|stats dc(title) by title, view, execute
-| fields title, view, execute</query>
+          <query>
+| rename "Technique #" as Technique
+| lookup enterprise-attack-lookup Technique
+| rename Technique as mitre_attack 
+| stats count by mitre_attack
+| fields mitre_attack
+| join mitre_attack max=0 
+  [| rest /services/configs/conf-savedsearches splunk_server=local count=0  
+  | search action.escu.search_type = detection  
+  | spath input=action.correlationsearch.annotations path=analytic_story{} output="analytic_story"  
+  | spath input=action.correlationsearch.annotations path=mitre_attack{} output="mitre_attack"  
+  | fields analytic_story, mitre_attack, title 
+  | mvexpand mitre_attack 
+  | search mitre_attack!="" 
+  | stats count by analytic_story, mitre_attack]
+| rename analytic_story as title
+| eval _title = title
+| eval _docs_title = trim(replace(title, "\s+", " "))
+| eval _docs_title = lower(substr(mvjoin(split(lower(_docs_title), " "), "_"),1,1)).substr(mvjoin(split(lower(_docs_title), " "), "_"), 2)
+| eval view="View [ESCU]"
+| eval execute="Execute [ASX]"
+| fields title, view, execute
+| rename title as "Analytic Story", view as "Docs Link", execute as "Run in ASX"
+</query>
         </search>
         <option name="count">20</option>
         <option name="dataOverlayMode">none</option>
@@ -226,7 +239,12 @@
         <option name="totalsRow">false</option>
         <option name="wrap">true</option>
         <drilldown>
-          <link target="_blank">/app/DA-ESS-ContentUpdate/analytic_story_details?form.analytic_story_name=$row.title$</link>
+          <condition field="Docs Link">
+            <link target="_blank">https://research.splunk.com/stories/$row._docs_title$</link>
+          </condition>
+          <condition field="Run in ASX">
+            <link target="_blank">/app/Splunk_ASX/execute?form.mode=now&amp;form.time.earliest=-24h@h&amp;form.time.latest=now&amp;form.story=$row._title$</link>
+          </condition>
         </drilldown>
       </table>
     </panel>
@@ -239,20 +257,21 @@
             <set token="detection_count">$job.resultCount$</set>
           </progress>
           <query>| mvexpand mitre_technique 
-|search mitre_technique!="None" mitre_technique!="" mitre_technique!="TA*" 
-
-|lookup atomic-red-windows-tests "Technique #" AS mitre_technique OUTPUT "Test Name" as atomic_test_name
-| mvexpand mitre_tactic_display
+| search mitre_technique!="None" mitre_technique!="" mitre_technique!="TA*" 
+| lookup atomic-red-windows-tests "Technique #" AS mitre_technique OUTPUT "Test Name" as atomic_test_name
+| mvexpand mitre_tactic
 | eval atomic_test_exists=if(atomic_test_name != "", "1", "0")
 | eval "Candidate Atomic test"=mitre_technique
 | where atomic_test_exists="1"
-|search mitre_technique=$technique_token$ channel=$channel_token$ mitre_tactic_display=$tactic_name_token$ mitre_technique_display=$technique_name_token$
-|table name, "Candidate Atomic test", mitre_tactic_display,channel</query>
+| search mitre_technique=$technique_token$ channel=$channel_token$ mitre_tactic=$tactic_name_token$ mitre_technique=$technique_name_token$
+| table name, "Candidate Atomic test", mitre_tactic_display, displayapp
+| rename name as "Detection", mitre_tactic_display as "MITRE Tactic", displayapp as "Source"</query>
         </search>
         <option name="count">10</option>
         <option name="dataOverlayMode">none</option>
         <option name="drilldown">cell</option>
         <option name="percentagesRow">false</option>
+        <option name="refresh.display">progressbar</option>
         <option name="rowNumbers">false</option>
         <option name="totalsRow">false</option>
         <option name="wrap">true</option>
@@ -265,16 +284,16 @@
           <progress>
             <set token="detection_count_default_panel">$job.resultCount$</set>
           </progress>
-          <query>|mvexpand mitre_technique 
-|search mitre_technique!="None" mitre_technique!="" mitre_technique!="TA*" 
-
-|lookup atomic-red-windows-tests "Technique #" AS mitre_technique OUTPUT "Test Name" as atomic_test_name
+          <query>| mvexpand mitre_technique 
+| search mitre_technique!="None" mitre_technique!="" mitre_technique!="TA*" 
+| lookup atomic-red-windows-tests "Technique #" AS mitre_technique OUTPUT "Test Name" as atomic_test_name
 | eval atomic_test_exists=if(atomic_test_name != "", "1", "0")
 | eval "Candidate Atomic test"=mitre_technique
 | where atomic_test_exists="1"
-|search mitre_technique="*" channel="*"  mitre_technique_display="***"
-|search mitre_technique=$technique_token$ channel=$channel_token$  mitre_technique_display=$technique_name_token$
-|table name, "Candidate Atomic test",channel</query>
+| search mitre_technique="*" channel="*" mitre_technique_display="***"
+| search mitre_technique=$technique_token$ channel=$channel_token$ mitre_technique_display=$technique_name_token$
+| table name, "Candidate Atomic test", displayapp
+| rename name as "Detection", displayapp as "Source"</query>
         </search>
         <option name="count">10</option>
         <option name="dataOverlayMode">none</option>
