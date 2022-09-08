@@ -264,6 +264,7 @@
 | eval "Candidate Atomic test"=mitre_technique
 | where atomic_test_exists="1"
 | search mitre_technique=$technique_token$ channel=$channel_token$ mitre_tactic=$tactic_name_token$ mitre_technique=$technique_name_token$
+| dedup name, "Candidate Atomic test", displayapp
 | table name, "Candidate Atomic test", mitre_tactic_display, displayapp
 | rename name as "Detection", mitre_tactic_display as "MITRE Tactic", displayapp as "Source"</query>
         </search>
