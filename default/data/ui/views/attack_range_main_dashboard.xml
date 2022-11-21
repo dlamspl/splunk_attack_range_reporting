@@ -272,15 +272,16 @@
           </progress>
           <query>`get_attack_data`
 | lookup enterprise-attack-lookup Technique
-| eval Label = Tactic + " - " + mitre_tactic_display 
-| eval Label2 = Technique + " - " + mitre_technique_display 
+| eval Label = mvindex(Tactic,0) + " - " + mvindex(mitre_tactic_display, 0)
+| eval Label2 = Technique + " - " + mvindex(mitre_technique_display, 0)
 | stats count by Label2, Label
 | table Label, Label2, count
 | rename Label as step1, Label2 as step2
 | append [
    search `get_attack_data`
    | lookup enterprise-attack-lookup Technique
-   | eval Label = Technique + " - " + mitre_technique_display 
+   | eval Label = Technique + " - " + mvindex(mitre_technique_display, 0)
+   | eval Tactic = mvindex(Tactic, 0)
    | eventstats dc("Test Name") as count by Label, Tactic, "Test Name"
    | table Label, "Test Name", count
    | rename Label as step1, "Test Name" as step2
@@ -289,11 +290,13 @@
           <latest>$time_token.latest$</latest>
         </search>
         <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
       </viz>
     </panel>
     <panel depends="$SanskeyNotInstalled$">
       <html>
-        <p>In order for this panel to show properly, please install the SanKey visualization available <a href="https://splunkbase.splunk.com/app/3112/">here</a></p>
+        <p>In order for this panel to show properly, please install the SanKey visualization available <a href="https://splunkbase.splunk.com/app/3112/">here</a>
+        </p>
       </html>
     </panel>
   </row>
@@ -402,9 +405,9 @@
   | search mitre_id!="None"
   | mvexpand mitre_id
   | rename mitre_id as mitre_technique]
-| stats dc(name) by name, mitre_technique, displayapp
-| table name, mitre_technique, displayapp
-| rename name as "Detection", mitre_technique as "Att&amp;ck Technique", displayapp as "Source"
+| stats dc(name) by name, mitre_technique, analytic_story, displayapp
+| table analytic_story, name, mitre_technique, displayapp
+| rename analytic_story as "Analytic Story", name as "Detection", mitre_technique as "Att&amp;ck Technique", displayapp as "Source"
           </query>
           <earliest>$time_token.earliest$</earliest>
           <latest>$time_token.latest$</latest>
