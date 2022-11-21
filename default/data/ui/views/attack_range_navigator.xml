@@ -11,8 +11,24 @@
     <query>| sseanalytics 
     </query>
   </search>
+  <search id="TreemapInstalledSearch">
+    <query>
+      | rest /services/apps/local 
+      | where title = "treemap_app"
+    </query>
+    <finalized>
+      <condition match=" 'job.resultCount' != 0">
+        <set token="TreemapInstalled">1</set>
+        <unset token="TreemapNotInstalled"></unset>
+      </condition>
+      <condition>
+        <unset token="TreemapInstalled"></unset>
+        <set token="TreemapNotInstalled">1</set>
+      </condition>
+    </finalized>
+  </search>
   <label>Attack Range Navigator</label>
-  <description>Available atomic red tests and possible mappings between detections</description>
+  <description>Available attack tests from supported frameworks and possible mappings to Splunk provided security detections.</description>
   <fieldset submitButton="false" autoRun="true">
     <input type="dropdown" token="channel_token" searchWhenChanged="true">
       <label>Content Source</label>
@@ -92,7 +108,15 @@
   </fieldset>
   <row>
     <panel>
-      <title># Available Atomic Red tests</title>
+      <html>
+      <h2 style="font-weight: bold">Atomic Red Team - <a href="https://atomicredteam.io"> https://atomicredteam.io/</a>
+        </h2>
+    </html>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Available Tests</title>
       <single>
         <search base="AtomicRedLookup">
           <query>| search "Technique #"=$technique_token$ | stats count</query>
@@ -102,7 +126,7 @@
       </single>
     </panel>
     <panel>
-      <title># MITRE ATT&amp;CK Tactics</title>
+      <title>ATT&amp;CK Tactics Covered</title>
       <single>
         <search base="AtomicRedLookup">
           <query>| search "Technique #" = $technique_token$ | stats dc("Tactic")</query>
@@ -115,7 +139,7 @@
       </single>
     </panel>
     <panel>
-      <title># MITRE ATT&amp;CK Techniques</title>
+      <title>ATT&amp;CK Techniques Covered</title>
       <single>
         <search base="AtomicRedLookup">
           <query>|search "Technique #" = $technique_token$ | stats dc("Technique #")</query>
@@ -131,69 +155,92 @@
         <option name="useThousandSeparators">1</option>
       </single>
     </panel>
+  </row>
+  <row>
     <panel>
-      <title>Atomic Red test Tactics</title>
-      <chart>
-        <search base="AtomicRedLookup">
-          <query>| search "Technique #" = $technique_token$ | stats count by Tactic</query>
-        </search>
-        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
-        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
-        <option name="charting.axisTitleX.visibility">visible</option>
-        <option name="charting.axisTitleY.visibility">visible</option>
-        <option name="charting.axisTitleY2.visibility">visible</option>
-        <option name="charting.axisX.abbreviation">none</option>
-        <option name="charting.axisX.scale">linear</option>
-        <option name="charting.axisY.abbreviation">none</option>
-        <option name="charting.axisY.scale">linear</option>
-        <option name="charting.axisY2.abbreviation">none</option>
-        <option name="charting.axisY2.enabled">0</option>
-        <option name="charting.axisY2.scale">inherit</option>
-        <option name="charting.chart">pie</option>
-        <option name="charting.chart.bubbleMaximumSize">50</option>
-        <option name="charting.chart.bubbleMinimumSize">10</option>
-        <option name="charting.chart.bubbleSizeBy">area</option>
-        <option name="charting.chart.nullValueMode">gaps</option>
-        <option name="charting.chart.showDataLabels">none</option>
-        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
-        <option name="charting.chart.stackMode">default</option>
-        <option name="charting.chart.style">shiny</option>
-        <option name="charting.drilldown">none</option>
-        <option name="charting.layout.splitSeries">0</option>
-        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
-        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
-        <option name="charting.legend.mode">standard</option>
-        <option name="charting.legend.placement">right</option>
-        <option name="charting.lineWidth">2</option>
-        <option name="refresh.display">progressbar</option>
-        <option name="trellis.enabled">0</option>
-        <option name="trellis.scales.shared">1</option>
-        <option name="trellis.size">medium</option>
-      </chart>
+      <html>
+      <h2 style="font-weight: bold">PurpleSharp - <a href="https://www.purplesharp.com/"> https://www.purplesharp.com/</a>
+        </h2>
+    </html>
     </panel>
   </row>
   <row>
     <panel>
-      <title>Atomic test Techniques available</title>
-      <viz type="punchcard_app.punchcard">
-        <search base="AtomicRedLookup">
-          <query>| search "Technique #" = $technique_token$ 
-| stats count count("Technique #") by Tactic, "Technique #"
-| sort -count</query>
+      <title>ATT&amp;CK Tactics Covered</title>
+      <single>
+        <search>
+          <query>| inputlookup purplesharp-techniques-lookup 
+| search "Technique" = $technique_token$ 
+| lookup enterprise-attack-lookup Technique OUTPUT mitre_tactic_display as Tactic
+| stats dc(Tactic)</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
         </search>
         <option name="drilldown">none</option>
-        <option name="punchcard_app.punchcard.colorMode">categorical</option>
-        <option name="punchcard_app.punchcard.labelRotation">angle</option>
-        <option name="punchcard_app.punchcard.maxColor">#3fc77a</option>
-        <option name="punchcard_app.punchcard.minColor">#d93f3c</option>
-        <option name="punchcard_app.punchcard.numOfBins">9</option>
-        <option name="punchcard_app.punchcard.radiusScale">global</option>
-        <option name="punchcard_app.punchcard.useColors">true</option>
+        <option name="refresh.display">progressbar</option>
+      </single>
+    </panel>
+    <panel>
+      <title>ATT&amp;CK Techniques Covered</title>
+      <single>
+        <search>
+          <query>| inputlookup purplesharp-techniques-lookup 
+| search "Technique" = $technique_token$ 
+| stats count</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="drilldown">none</option>
+      </single>
+    </panel>
+  </row>
+  <row>
+    <panel depends="$TreemapInstalled$">
+      <title>Available Atomic Tests by Att&amp;ck Tactic</title>
+      <viz type="treemap_app.treemap">
+        <search base="AtomicRedLookup">
+          <query>| search "Technique #" = $technique_token$ 
+| lookup enterprise-attack-lookup Technique as "Technique #" OUTPUT mitre_tactic_display as Tactic
+| stats count as Tests by Tactic, "Technique Name"
+| sort Tactic</query>
+        </search>
+        <option name="drilldown">none</option>
         <option name="refresh.display">progressbar</option>
         <option name="trellis.enabled">0</option>
         <option name="trellis.scales.shared">1</option>
         <option name="trellis.size">medium</option>
       </viz>
+    </panel>
+    <panel depends="$TreemapNotInstalled$">
+      <html>
+        <p>In order for this panel to show properly, please install the Treemap visualization available <a href="https://splunkbase.splunk.com/app/3118">here</a>
+        </p>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel depends="$TreemapInstalled$">
+      <title>PurpleSharp Covered Techniques by Att&amp;ck Tactic</title>
+      <viz type="treemap_app.treemap">
+        <search>
+          <query>| inputlookup purplesharp-techniques-lookup 
+| search "Technique" = $technique_token$ 
+| lookup enterprise-attack-lookup Technique OUTPUT mitre_tactic_display as Tactic, mitre_technique_display
+| eval Technique =  mitre_technique_display + " [" + Technique + "]"
+| stats count by Tactic, Technique
+| sort Tactic</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </viz>
+    </panel>
+    <panel depends="$TreemapNotInstalled$">
+      <html>
+        <p>In order for this panel to show properly, please install the Treemap visualization available <a href="https://splunkbase.splunk.com/app/3118">here</a>
+        </p>
+      </html>
     </panel>
   </row>
   <row>

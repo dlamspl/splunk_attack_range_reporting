@@ -22,6 +22,7 @@ This application has the following depencencies:
 + [Status Indicator - Custom Visualization](https://splunkbase.splunk.com/app/3119/)
 + [Sankey Diagram - Custom Visualization](https://splunkbase.splunk.com/app/3112/)
 + [Parallel Coordinates - Custom Visualization](https://splunkbase.splunk.com/app/3137)
++ [Treemap - Custom Visualization](https://splunkbase.splunk.com/app/3118)
 
 **Note:** The application will fallback to not showing any panels that rely on prerequisite visualizations if they are missing.
 

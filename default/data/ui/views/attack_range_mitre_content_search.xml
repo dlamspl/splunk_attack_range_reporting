@@ -1,4 +1,4 @@
-<form theme="dark">
+<form version="1.1" theme="dark">
   <label>MITRE ATT&amp;CK Based Content Search</label>
   <description>Displays Splunk Security Detections and Atomic Red/PurpleSharp Tests based on selected MITRE Att&amp;ck technique(s).</description>
   <!-- Check if the Parallel Coordinates Visualiztion is installed, and inform the user if not (and adapt the relevant panel content accordingly) -->
