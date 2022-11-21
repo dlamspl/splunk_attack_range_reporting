@@ -134,6 +134,7 @@
 | search $tokTechniques$
 | rename mitre_id as "Att&amp;ck Technique/Sub Technique" 
 | eval "Has related tests?" = "Yes" 
+| eval Link = "[View Details]"
 | appendpipe 
     [ stats count 
     | eval "Has related tests?"="None of the selected technique(s) have tests yet" 
@@ -147,6 +148,9 @@
         <format type="color" field="Has related tests?">
           <colorPalette type="map">{"Yes":#53A051, "None of the selected technique(s) have tests yet":#FF0000}</colorPalette>
         </format>
+        <drilldown>
+          <link target="_blank">https://www.purplesharp.com/en/latest/techniques/techniques.html</link>
+        </drilldown>
       </table>
     </panel>
   </row>
