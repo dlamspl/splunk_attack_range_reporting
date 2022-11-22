@@ -1,0 +1,157 @@
+<form version="1.1" theme="dark">
+  <label>MITRE ATT&amp;CK Based Content Search</label>
+  <description>Displays Splunk Security Detections and Atomic Red/PurpleSharp Tests based on selected MITRE Att&amp;ck technique(s).</description>
+  <!-- Check if the Parallel Coordinates Visualiztion is installed, and inform the user if not (and adapt the relevant panel content accordingly) -->
+  <search id="ParallelCoordinatesInstalledSearch">
+    <query>
+      | rest /services/apps/local 
+      | where title = "parallel_coordinates_app"
+    </query>
+    <finalized>
+      <condition match=" 'job.resultCount' != 0">
+        <set token="ParallelCoordinatesInstalled">1</set>
+        <unset token="ParallelCoordinatesNotInstalled"></unset>
+      </condition>
+      <condition>
+        <unset token="ParallelCoordinatesInstalled"></unset>
+        <set token="ParallelCoordinatesNotInstalled">1</set>
+      </condition>
+    </finalized>
+  </search>
+  <fieldset submitButton="false" autoRun="true">
+    <input type="multiselect" token="tokTechniques" searchWhenChanged="true">
+      <label>Selected Att&amp;ck Technique(s)</label>
+      <valuePrefix>mitre_id="</valuePrefix>
+      <delimiter> OR </delimiter>
+      <fieldForLabel>label</fieldForLabel>
+      <fieldForValue>value</fieldForValue>
+      <search>
+        <query>| inputlookup enterprise-attack-lookup
+| stats count by Technique, mitre_technique_display
+| eval value = Technique, label = value + " - " + mitre_technique_display
+| fields value, label
+| sort value</query>
+      </search>
+      <valueSuffix>"</valueSuffix>
+      <prefix>(</prefix>
+      <suffix>)</suffix>
+    </input>
+  </fieldset>
+  <row>
+    <panel depends="$ParallelCoordinatesInstalled$">
+      <title>Splunk Detections/ATT&amp;CK Technique(s)/Atomic Tests Mapping</title>
+      <viz type="parallel_coordinates_app.parallel_coordinates">
+        <search>
+          <query>| sseanalytics 
+| fields mitre_id, name 
+| mvexpand mitre_id 
+| search $tokTechniques$ 
+| table mitre_id, name 
+| lookup atomic-red-windows-tests "Technique #" AS mitre_id OUTPUT "Test Name" as test_name, "Test #" as test_no
+| eval label = mvzip(test_no, test_name, " - ")
+| fields mitre_id, name, label
+| mvexpand label
+| eval label = if(isnull(label) OR label=="", "&lt;NO TEST YET&gt;", label)
+| lookup purplesharp-techniques-lookup Technique as mitre_id OUTPUTNEW Technique as matched_technique
+| eval "Supported by PurpleSharp" = if(isnull(matched_technique), "No", "Yes")
+| fields - matched_technique
+| table name, mitre_id, "Supported by PurpleSharp", label
+| sort mitre_id, label, name
+| rename mitre_id as "Att&amp;ck Technique/Sub Technique", name as "Splunk Security Detection", label as "Atomic Test Name"</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="parallel_coordinates_app.parallel_coordinates.colorMode">categorical</option>
+        <option name="parallel_coordinates_app.parallel_coordinates.hideTicks">false</option>
+        <option name="parallel_coordinates_app.parallel_coordinates.maxCategories">35</option>
+        <option name="parallel_coordinates_app.parallel_coordinates.maxColor">#3fc77a</option>
+        <option name="parallel_coordinates_app.parallel_coordinates.minColor">#006d9c</option>
+        <option name="refresh.display">progressbar</option>
+      </viz>
+    </panel>
+    <panel depends="$ParallelCoordinatesNotInstalled$">
+      <html>
+        <p>In order for this panel to show properly, please install the Parallel Coordinates visualization available <a href="https://splunkbase.splunk.com/app/3137">here</a>
+        </p>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Available Splunk Security Detections</title>
+      <table>
+        <search>
+          <query>| sseanalytics 
+| fields mitre_id, name, displayapp, dashboard
+| eval _SSE_url = "" + dashboard
+| mvexpand mitre_id 
+| search $tokTechniques$
+| eval Link = "[View Details]"
+| table mitre_id, displayapp, name, Link, _SSE_url
+| sort mitre_id, name
+| rename mitre_id as "Att&amp;ck Technique/Sub Technique", displayapp as "Source", name as "Security Detection"</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="count">10</option>
+        <option name="drilldown">row</option>
+        <option name="refresh.display">progressbar</option>
+        <drilldown>
+          <link target="_blank">/app/Splunk_Security_Essentials/$row._SSE_url|n$</link>
+        </drilldown>
+      </table>
+    </panel>
+    <panel>
+      <title>Available Atomic Red Tests</title>
+      <table>
+        <search>
+          <query>| inputlookup atomic-red-windows-tests 
+| eval name = 'Test #' + " - " + 'Test Name' 
+| rename "Technique #" as mitre_id
+| search $tokTechniques$
+| fields mitre_id, name, "Test GUID"
+| eval Link = "[View Details]"
+| eval _mitre_id = mitre_id
+| sort mitre_id, name
+| rename mitre_id as "Att&amp;ck Technique/Sub Technique", name as "Test Name"</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="drilldown">row</option>
+        <option name="refresh.display">progressbar</option>
+        <drilldown>
+          <link target="_blank">https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/$row._mitre_id|n$/$row._mitre_id|n$.md</link>
+        </drilldown>
+      </table>
+    </panel>
+    <panel>
+      <title>PurpleSharp Supported Techniques</title>
+      <table>
+        <search>
+          <query>| inputlookup purplesharp-techniques-lookup 
+| rename "Technique" as mitre_id 
+| search $tokTechniques$
+| rename mitre_id as "Att&amp;ck Technique/Sub Technique" 
+| eval "Has related tests?" = "Yes" 
+| eval Link = "[View Details]"
+| appendpipe 
+    [ stats count 
+    | eval "Has related tests?"="None of the selected technique(s) have tests yet" 
+    | where count==0 
+    | table "Has related tests?"]</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="drilldown">row</option>
+        <option name="refresh.display">progressbar</option>
+        <format type="color" field="Has related tests?">
+          <colorPalette type="map">{"Yes":#53A051, "None of the selected technique(s) have tests yet":#FF0000}</colorPalette>
+        </format>
+        <drilldown>
+          <link target="_blank">https://www.purplesharp.com/en/latest/techniques/techniques.html</link>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+</form>

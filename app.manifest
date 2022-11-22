@@ -5,7 +5,7 @@
     "id": {
       "group": null,
       "name": "splunk_attack_range_reporting",
-      "version": "1.0.8"
+      "version": "1.0.9"
     },
     "author": [
       {
